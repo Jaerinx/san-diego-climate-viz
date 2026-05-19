@@ -1,0 +1,122 @@
+:root {
+  --bg: #f6f8fb;
+  --card: #ffffff;
+  --ink: #1a2332;
+  --muted: #5c6b7a;
+  --accent: #0b6e99;
+  --warm: #c44e52;
+  --cool: #2a7f62;
+  --grid: #d8e0e8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.5;
+}
+
+header {
+  padding: 2rem 1.5rem 1rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+header h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+}
+
+header p {
+  margin: 0;
+  color: var(--muted);
+  max-width: 70ch;
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--grid);
+  border-radius: 12px;
+  padding: 1rem 1rem 0.5rem;
+  box-shadow: 0 2px 8px rgba(26, 35, 50, 0.05);
+}
+
+.chart-card h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+}
+
+.chart-card .subtitle {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.chart {
+  width: 100%;
+  overflow-x: auto;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.axis-label {
+  font-size: 12px;
+  fill: var(--muted);
+}
+
+.axis path,
+.axis line {
+  stroke: var(--grid);
+}
+
+.axis text {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.grid line {
+  stroke: var(--grid);
+  stroke-opacity: 0.7;
+}
+
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(26, 35, 50, 0.92);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+footer {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1.5rem 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.legend text {
+  font-size: 11px;
+  fill: var(--muted);
+}
