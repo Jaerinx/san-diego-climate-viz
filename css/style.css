@@ -120,3 +120,44 @@ footer {
   font-size: 11px;
   fill: var(--muted);
 }
+
+/* Cross-chart brushing + dimming */
+.dim {
+  opacity: 0.18;
+}
+
+.highlight-shade {
+  fill: rgba(26, 35, 50, 0.06);
+  pointer-events: none;
+}
+
+.highlight-window {
+  fill: rgba(11, 110, 153, 0.10);
+  stroke: rgba(11, 110, 153, 0.55);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.brush .selection {
+  fill: rgba(11, 110, 153, 0.14);
+  stroke: rgba(11, 110, 153, 0.75);
+}
+
+.brush .handle {
+  fill: rgba(11, 110, 153, 0.85);
+}
+
+.minmax-dot {
+  fill: rgba(26, 35, 50, 0.9);
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+
+.minmax-label {
+  font-size: 11px;
+  fill: rgba(26, 35, 50, 0.92);
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}

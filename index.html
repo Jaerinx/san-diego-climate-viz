@@ -1,79 +1,81 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>San Diego Climate — CMIP6 Exploratory Visualizations</title>
-  <link rel="stylesheet" href="css/style.css" />
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-</head>
-<body>
-  <header>
-    <h1>San Diego Climate Over the Last Century</h1>
-    <p>
-      Five static exploratory charts built with D3.js: NOAA CMIP6 historical simulations
-      (GFDL-ESM4) for temperature, precipitation, and sea level near San Diego, plus U.S. Census
-      county population density (1925–2014).
-    </p>
-    <p id="meta-grid"></p>
-  </header>
-
-  <main>
-    <section class="chart-card">
-      <h2>1. Warming trend in annual mean temperature</h2>
-      <p class="subtitle">
-        Year-to-year variability with a 5-year moving average reveals gradual warming near San Diego
-        over the last nine decades of the historical run.
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>San Diego Climate — CMIP6 Exploratory Visualizations</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>San Diego Climate Over the Last Century</h1>
+      <p>
+        Five static exploratory charts built with D3.js: NOAA CMIP6 historical simulations
+        (GFDL-ESM4) for temperature, precipitation, and sea level near San Diego, plus U.S. Census
+        county population density (1925–2014).
       </p>
-      <div class="chart" id="chart-annual-temp"></div>
-    </section>
+      <p id="meta-grid"></p>
+    </header>
 
-    <section class="chart-card">
-      <h2>2. Temperature anomalies from a 1961–1990 baseline</h2>
-      <p class="subtitle">
-        Bars show departure from the late-20th-century climatological mean — a standard reference
-        for detecting recent warming.
+    <main>
+      <section class="chart-card">
+        <h2>1. Warming trend in annual mean temperature</h2>
+        <p class="subtitle">
+          Year-to-year variability with a 5-year moving average reveals gradual warming near San
+          Diego over the last nine decades of the historical run.
+        </p>
+        <div class="chart" id="chart-annual-temp"></div>
+      </section>
+
+      <section class="chart-card">
+        <h2>2. Temperature anomalies from a 1961–1990 baseline</h2>
+        <p class="subtitle">
+          Bars show departure from the late-20th-century climatological mean — a standard reference
+          for detecting recent warming.
+        </p>
+        <div class="chart" id="chart-anomaly"></div>
+      </section>
+
+      <section class="chart-card">
+        <h2>3. Modeled sea level near the San Diego coast</h2>
+        <p class="subtitle">
+          CMIP6 sea surface height (<code>zos</code>) at the nearest ocean grid cell shows long-term
+          variability and rise relative to a 1961–1990 baseline (millimeters).
+        </p>
+        <div class="chart" id="chart-sea-level"></div>
+      </section>
+
+      <section class="chart-card">
+        <h2>4. Year-to-year precipitation totals</h2>
+        <p class="subtitle">
+          Modeled annual rainfall shows Mediterranean-style wet winters and dry summers aggregated
+          to yearly totals; dashed line marks the 1961–1990 mean.
+        </p>
+        <div class="chart" id="chart-precip"></div>
+      </section>
+
+      <section class="chart-card">
+        <h2>5. San Diego County population density</h2>
+        <p class="subtitle">
+          U.S. Census decennial counts (red dots) define county population; density uses a fixed
+          land area of 4,207 sq mi with linear interpolation between census years.
+        </p>
+        <div class="chart" id="chart-population"></div>
+      </section>
+    </main>
+
+    <footer>
+      <p id="meta-source"></p>
+      <p>
+        Data:
+        <a href="https://console.cloud.google.com/marketplace/product/noaa-public/cmip6"
+          >NOAA Public CMIP6 on Google Cloud</a
+        >. Course context: <a href="https://dsc106.com/projects/project3/">DSC 106 Project 3</a>.
+        CMIP6 values are model simulations. Population data are from the U.S. Census, not CMIP6.
       </p>
-      <div class="chart" id="chart-anomaly"></div>
-    </section>
+    </footer>
 
-    <section class="chart-card">
-      <h2>3. Modeled sea level near the San Diego coast</h2>
-      <p class="subtitle">
-        CMIP6 sea surface height (<code>zos</code>) at the nearest ocean grid cell shows long-term
-        variability and rise relative to a 1961–1990 baseline (millimeters).
-      </p>
-      <div class="chart" id="chart-sea-level"></div>
-    </section>
-
-    <section class="chart-card">
-      <h2>4. Year-to-year precipitation totals</h2>
-      <p class="subtitle">
-        Modeled annual rainfall shows Mediterranean-style wet winters and dry summers aggregated
-        to yearly totals; dashed line marks the 1961–1990 mean.
-      </p>
-      <div class="chart" id="chart-precip"></div>
-    </section>
-
-    <section class="chart-card">
-      <h2>5. San Diego County population density</h2>
-      <p class="subtitle">
-        U.S. Census decennial counts (red dots) define county population; density uses a fixed land
-        area of 4,207 sq mi with linear interpolation between census years.
-      </p>
-      <div class="chart" id="chart-population"></div>
-    </section>
-  </main>
-
-  <footer>
-    <p id="meta-source"></p>
-    <p>
-      Data: <a href="https://console.cloud.google.com/marketplace/product/noaa-public/cmip6">NOAA Public CMIP6 on Google Cloud</a>.
-      Course context: <a href="https://dsc106.com/projects/project3/">DSC 106 Project 3</a>.
-      CMIP6 values are model simulations. Population data are from the U.S. Census, not CMIP6.
-    </p>
-  </footer>
-
-  <script src="js/charts.js"></script>
-</body>
+    <script src="js/charts.js"></script>
+  </body>
 </html>
