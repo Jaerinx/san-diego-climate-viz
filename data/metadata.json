@@ -10,7 +10,7 @@
   "grid_lat": 32.5,
   "grid_lon": 243.12500000000003,
   "zos_grid_lat": 32.5,
-  "zos_grid_lon": 242.5,
+  "zos_grid_lon": 242.49999999999997,
   "period": "1925-2014",
   "baseline_period": "1961-1990",
   "population_source": "U.S. Census decennial county population (San Diego County, FIPS 06073)",

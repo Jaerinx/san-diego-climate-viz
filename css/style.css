@@ -108,12 +108,280 @@ svg {
   transition: opacity 0.15s;
 }
 
+/* ── Hero card ─────────────────────────────────────────────────────── */
+.hero-card {
+  border: 1.5px solid #d0dce8;
+  box-shadow: 0 4px 16px rgba(26, 35, 50, 0.08);
+}
+
+/* ── Per-chart animation controls ─────────────────────────────────── */
+.panel-ctrl {
+  padding: 0.5rem 0 0.75rem;   /* no horizontal padding so slider fills same width as SVG */
+  user-select: none;
+}
+
+/* Slider padded to align with SVG plot area (xLeft=58, xRight=864 out of W=900) */
+.slider-align {
+  padding-left: 6.44%;   /* 58/900 */
+  padding-right: 4%;     /* 36/900 */
+}
+
+.slider-below-chart {
+  border-top: 1px solid var(--grid);
+  margin-top: 0.25rem;
+}
+
+.ctrl-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.4rem;
+  padding: 0 1rem;  /* horizontal padding moved here from .panel-ctrl */
+}
+
+.ctrl-title {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--muted);
+  min-width: 90px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.play-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  min-width: 82px;
+  white-space: nowrap;
+}
+
+.play-btn:hover { background: #0a5e85; }
+
+.year-badge {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  min-width: 4.5ch;
+}
+
+.speed-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.speed-label {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.speed-btn {
+  background: none;
+  border: 1px solid var(--grid);
+  border-radius: 4px;
+  padding: 0.18rem 0.45rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.12s;
+  line-height: 1.4;
+}
+
+.speed-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.speed-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.year-slider {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin-top: 0.15rem;
+}
+
+.year-ticks {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.15rem 0 0;
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+/* ── Month trend panel ─────────────────────────────────────────────── */
+.month-trend-panel {
+  background: var(--bg);
+  border: 1px solid var(--grid);
+  border-radius: 8px;
+  padding: 0.75rem 1rem 0.5rem;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.month-trend-panel.hidden {
+  display: none;
+}
+
+.month-trend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.month-trend-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.month-trend-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.month-trend-close:hover {
+  background: var(--grid);
+}
+
+/* ── Recommendation chart preferences ─────────────────────────────── */
+.rec-prefs {
+  padding: 0.75rem 1rem 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.pref-row {
+  display: grid;
+  grid-template-columns: 130px 90px 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 0 0.75rem;
+}
+
+.pref-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+  grid-row: 1;
+}
+
+.pref-val {
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-weight: 600;
+  grid-row: 1;
+}
+
+.pref-row input[type=range] {
+  grid-row: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.pref-ends {
+  grid-column: 3;
+  grid-row: 2;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: var(--muted);
+  padding: 0 2px;
+}
+
+.year-picker-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 1rem 0.6rem;
+  border-bottom: 1px solid var(--grid);
+  margin-bottom: 0.25rem;
+}
+
+.year-picker-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.year-picker-hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.year-input {
+  grid-column: 3;
+  width: 110px;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--grid);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: var(--ink);
+  background: #fff;
+}
+
+.year-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.year-input::placeholder {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* ── Tooltip ───────────────────────────────────────────────────────── */
 footer {
   max-width: 1100px;
   margin: 0 auto;
   padding: 0 1.5rem 2rem;
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.5rem 0 0;
+}
+
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--grid);
+}
+
+.section-divider-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 
 .legend text {

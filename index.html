@@ -3,28 +3,181 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>San Diego Climate — CMIP6 Exploratory Visualizations</title>
+    <title>San Diego Seasonal Climate, 1925–2014</title>
     <link rel="stylesheet" href="css/style.css" />
     <script src="https://d3js.org/d3.v7.min.js"></script>
   </head>
   <body>
     <header>
-      <h1>San Diego Climate Over the Last Century</h1>
+      <h1>San Diego Seasonal Climate, 1925–2014</h1>
       <p>
-        Five static exploratory charts built with D3.js: NOAA CMIP6 historical
-        simulations (GFDL-ESM4) for temperature, precipitation, and sea level
-        near San Diego, plus U.S. Census county population density (1925–2014).
+        Explore 90 years of San Diego's climate using NOAA CMIP6 model data.
       </p>
       <p id="meta-grid"></p>
     </header>
 
+    <div class="tooltip"></div>
+
     <main>
+      <!-- ── HERO 1: Temperature ───────────────────────────────────── -->
+      <section class="chart-card hero-card">
+        <h2>San Diego's Monthly Temperature, 1925–2014</h2>
+        <p class="subtitle">
+          Each year's monthly temperature profile (bold) compared to all 90 years (gray) and the long-run average (dashed).
+          <span style="color:#c44e52;font-weight:600">Red dots</span> are warmer than average,
+          <span style="color:#4a90a4;font-weight:600">blue</span> are cooler.
+          Click any dot to see that month's 90-year trend.
+        </p>
+        <div class="chart" id="chart-temp-seasonal"></div>
+        <div class="panel-ctrl slider-below-chart">
+          <div class="ctrl-header">
+            <button id="play-btn-t" class="play-btn">&#9654; Play</button>
+            <span class="year-badge" id="year-label-t">1925</span>
+            <div class="speed-group">
+              <span class="speed-label">Speed:</span>
+              <button class="speed-btn-t speed-btn" data-ms="1000">0.5×</button>
+              <button class="speed-btn-t speed-btn active" data-ms="500">1×</button>
+              <button class="speed-btn-t speed-btn" data-ms="250">2×</button>
+              <button class="speed-btn-t speed-btn" data-ms="100">5×</button>
+            </div>
+          </div>
+          <div class="slider-align">
+            <input type="range" id="year-slider-t" class="year-slider" min="1925" max="2014" step="any" value="1925">
+            <div class="year-ticks">
+              <span>1925</span><span>1940</span><span>1955</span><span>1970</span><span>1985</span><span>2000</span><span>2014</span>
+            </div>
+          </div>
+        </div>
+        <div id="month-trend-panel" class="month-trend-panel hidden">
+          <div class="month-trend-header">
+            <h3 id="month-trend-title"></h3>
+            <button class="month-trend-close" id="month-trend-close" aria-label="Close">✕</button>
+          </div>
+          <div id="month-trend-chart"></div>
+        </div>
+      </section>
+
+      <!-- ── HERO 2: Precipitation ──────────────────────────────────── -->
+      <section class="chart-card hero-card">
+        <h2>San Diego's Monthly Precipitation, 1925–2014</h2>
+        <p class="subtitle">
+          Each year's monthly rainfall (bold blue) compared to all 90 years (gray) and the long-run average (dashed).
+          <span style="color:#4a90a4;font-weight:600">Blue dots</span> are wetter than average,
+          <span style="color:#c4936a;font-weight:600">orange</span> are drier.
+        </p>
+        <div class="chart" id="chart-precip-seasonal"></div>
+        <div class="panel-ctrl slider-below-chart">
+          <div class="ctrl-header">
+            <button id="play-btn-p" class="play-btn">&#9654; Play</button>
+            <span class="year-badge" id="year-label-p">1925</span>
+            <div class="speed-group">
+              <span class="speed-label">Speed:</span>
+              <button class="speed-btn-p speed-btn" data-ms="1000">0.5×</button>
+              <button class="speed-btn-p speed-btn active" data-ms="500">1×</button>
+              <button class="speed-btn-p speed-btn" data-ms="250">2×</button>
+              <button class="speed-btn-p speed-btn" data-ms="100">5×</button>
+            </div>
+          </div>
+          <div class="slider-align">
+            <input type="range" id="year-slider-p" class="year-slider" min="1925" max="2014" step="any" value="1925">
+            <div class="year-ticks">
+              <span>1925</span><span>1940</span><span>1955</span><span>1970</span><span>1985</span><span>2000</span><span>2014</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── HERO 3: Cloud cover ───────────────────────────────────── -->
+      <section class="chart-card hero-card">
+        <h2>San Diego's Monthly Cloud Cover, 1925–2014</h2>
+        <p class="subtitle">
+          Each year's monthly cloud cover (bold) compared to all 90 years (gray) and the long-run average (dashed).
+          <span style="color:#f4a261;font-weight:600">Amber dots</span> are sunnier than average,
+          <span style="color:#9bb3c9;font-weight:600">blue</span> are cloudier.
+          <span id="cloud-chart-note" style="color:var(--muted);font-style:italic">Run <code>python scripts/extract_cloud.py</code> to load this chart.</span>
+        </p>
+        <div class="chart" id="chart-cloud-seasonal"></div>
+        <div class="panel-ctrl slider-below-chart">
+          <div class="ctrl-header">
+            <button id="play-btn-c" class="play-btn">&#9654; Play</button>
+            <span class="year-badge" id="year-label-c">1925</span>
+            <div class="speed-group">
+              <span class="speed-label">Speed:</span>
+              <button class="speed-btn-c speed-btn" data-ms="1000">0.5×</button>
+              <button class="speed-btn-c speed-btn active" data-ms="500">1×</button>
+              <button class="speed-btn-c speed-btn" data-ms="250">2×</button>
+              <button class="speed-btn-c speed-btn" data-ms="100">5×</button>
+            </div>
+          </div>
+          <div class="slider-align">
+            <input type="range" id="year-slider-c" class="year-slider" min="1925" max="2014" step="any" value="1925">
+            <div class="year-ticks">
+              <span>1925</span><span>1940</span><span>1955</span><span>1970</span><span>1985</span><span>2000</span><span>2014</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── RECOMMENDATION CHART ──────────────────────────────────── -->
+      <section class="chart-card">
+        <h2>San Diego Seasonal Guide: Monthly Activity Recommendation</h2>
+        <p class="subtitle">
+          Adjust preferences below and the recommendations update live.
+          <span id="cloud-note" style="color:var(--muted);font-style:italic"></span>
+        </p>
+        <div class="year-picker-bar">
+          <label class="year-picker-label">Year</label>
+          <span class="pref-val" id="label-year">Average</span>
+          <input type="number" id="pref-year" class="year-input" min="1925" max="2014" placeholder="1925–2014">
+          <span class="year-picker-hint">leave blank for 90-year average</span>
+        </div>
+        <div id="chart-visit-rec"></div>
+        <div class="rec-prefs">
+          <div class="pref-row">
+            <label class="pref-label">Temperature preference</label>
+            <span class="pref-val" id="label-warm">Moderate</span>
+            <input type="range" id="pref-warm" min="0" max="1" step="0.25" value="0.5" list="warm-ticks">
+            <datalist id="warm-ticks">
+              <option value="0"></option><option value="0.25"></option>
+              <option value="0.5"></option><option value="0.75"></option>
+              <option value="1"></option>
+            </datalist>
+            <div class="pref-ends"><span>Prefer cold</span><span>Prefer hot</span></div>
+          </div>
+          <div class="pref-row">
+            <label class="pref-label">Rain tolerance</label>
+            <span class="pref-val" id="label-dry">Moderate</span>
+            <input type="range" id="pref-dry" min="0" max="1" step="0.25" value="0.5" list="dry-ticks">
+            <datalist id="dry-ticks">
+              <option value="0"></option><option value="0.25"></option>
+              <option value="0.5"></option><option value="0.75"></option>
+              <option value="1"></option>
+            </datalist>
+            <div class="pref-ends"><span>Rain ok</span><span>Must be dry</span></div>
+          </div>
+          <div class="pref-row" id="sun-pref-row">
+            <label class="pref-label">Sunniness</label>
+            <span class="pref-val" id="label-sun">Moderate</span>
+            <input type="range" id="pref-sun" min="0" max="1" step="0.25" value="0.5" list="sun-ticks">
+            <datalist id="sun-ticks">
+              <option value="0"></option><option value="0.25"></option>
+              <option value="0.5"></option><option value="0.75"></option>
+              <option value="1"></option>
+            </datalist>
+            <div class="pref-ends"><span>Love cloudy</span><span>Love sunny</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── PROTOTYPE SECTION ────────────────────────────────────────── -->
+      <div class="section-divider">
+        <h2 class="section-divider-title">Prototype</h2>
+      </div>
+
       <section class="chart-card">
         <h2>1. Warming trend in annual mean temperature</h2>
         <p class="subtitle">
-          Year-to-year variability with a 5-year moving average reveals gradual
-          warming near San Diego over the last nine decades of the historical
-          run.
+          Annual temperatures (thin line) with a 5-year moving average (bold) showing a gradual warming trend over nine decades.
         </p>
         <div class="chart" id="chart-annual-temp"></div>
       </section>
@@ -32,8 +185,7 @@
       <section class="chart-card">
         <h2>2. Temperature anomalies from a 1961–1990 baseline</h2>
         <p class="subtitle">
-          Bars show departure from the late-20th-century climatological mean — a
-          standard reference for detecting recent warming.
+          Each bar shows how much the annual mean departed from the 1961–1990 baseline, a standard reference period for tracking warming.
         </p>
         <div class="chart" id="chart-anomaly"></div>
       </section>
@@ -41,9 +193,7 @@
       <section class="chart-card">
         <h2>3. Modeled sea level near the San Diego coast</h2>
         <p class="subtitle">
-          CMIP6 sea surface height (<code>zos</code>) at the nearest ocean grid
-          cell shows long-term variability and rise relative to a 1961–1990
-          baseline (millimeters).
+          Modeled sea surface height at the nearest ocean grid point, relative to the 1961–1990 average in millimeters.
         </p>
         <div class="chart" id="chart-sea-level"></div>
       </section>
@@ -51,9 +201,7 @@
       <section class="chart-card">
         <h2>4. Year-to-year precipitation totals</h2>
         <p class="subtitle">
-          Modeled annual rainfall shows Mediterranean-style wet winters and dry
-          summers aggregated to yearly totals; dashed line marks the 1961–1990
-          mean.
+          Annual rainfall totals with a classic wet-winter, dry-summer pattern. Dashed line marks the 1961–1990 average.
         </p>
         <div class="chart" id="chart-precip"></div>
       </section>
@@ -61,24 +209,17 @@
       <section class="chart-card">
         <h2>5. San Diego County population density</h2>
         <p class="subtitle">
-          U.S. Census decennial counts (red dots) define county population;
-          density uses a fixed land area of 4,207 sq mi with linear
-          interpolation between census years.
+          Population density using Census counts (red dots) and a fixed land area of 4,207 sq mi, with linear interpolation between census years.
         </p>
         <div class="chart" id="chart-population"></div>
       </section>
       <div>
         <h2>Write-Up</h2>
         <p>
-          So far, we have built a prototype for our interactive charts called
-          "San Diego Climate Over the Last Century" with the 5 D3.js
-          visualizations. We puled NOAA CMIP6 historical simulation data to
-          report things like annual mean temperature, temperature anomalies,
-          yearly precipitation, and sea surface height near SD. We also added
-          the U.S. Census county population density from 1925-2014 to provide more context for our climate data. We wrote explanations for each visualization but kept the layout simple for readability and a story-based webpage so that the reader learns in order as they scroll through the page - learning about warming, anomalies, sea level, rain, then population in order.
+          We built "San Diego Climate Over the Last Century," an interactive D3.js visualization using NOAA CMIP6 historical simulation data covering annual mean temperature, temperature anomalies, sea surface height, and precipitation near San Diego. We also pulled U.S. Census data for county population density from 1925 to 2014. The page is structured as a scrollable story, walking readers through warming trends, anomalies, sea level, rainfall, and population in sequence.
         </p>
         <p>
-          The most challenging part of our project to design will likely be combining the information from the five separate plots into one clear narrative. Currently, each visualization stands on its own and mostly has its own story, but moving forward we will need to balance text and interaction in a way that avoids overplotting. Also, it will be challenging but necessary to present sea level and precipitation information without misleading readers, since the data comes from CMIP6 model simulations, not actual measurements. We will also need to combine and cleanly align population density and the climate series since they come from different sources. However, this is definitely worthy of our time as it will provide another layer of context of what climate changes actually mean for the population. 
+          The biggest design challenge ahead is weaving the five plots into one coherent story. Right now each chart stands on its own, so we will need to balance interactivity and annotation to avoid overplotting. Presenting sea level and precipitation data without misleading readers will also require careful framing since the numbers come from CMIP6 model simulations, not direct observations. Layering in the population data will add meaningful context about what these climate shifts actually mean for people living in San Diego.
         </p>
       </div>
     </main>
