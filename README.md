@@ -1,5 +1,7 @@
 # San Diego Climate — CMIP6 Exploratory Charts (D3)
 
+Website: https://jaerinx.github.io/san-diego-climate-viz/
+
 Five static D3.js visualizations for [DSC 106 Project 3](https://dsc106.com/projects/project3/) checkpoint exploration, using **NOAA Public CMIP6** historical simulations ([Google Cloud Marketplace](https://console.cloud.google.com/marketplace/product/noaa-public/cmip6)).
 
 ## Setup
