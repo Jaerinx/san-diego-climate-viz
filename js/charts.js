@@ -1,210 +1,16 @@
-/* Five static D3 visualizations — San Diego CMIP6 historical climate (1925–2014) */
+/* ── Global unit state ───────────────────────────────────────────────── */
+let tempUnit = 'C';               // 'C' or 'F'
+let _updateRecChart = null;       // exposed from chartVisitRecommendation closure
+let _updateTempSeasonalUnit = null; // exposed from chartSeasonalCurve closure
 
-const margin = { top: 28, right: 24, bottom: 44, left: 56 };
-const width = 900;
-const height = 340;
-const innerW = width - margin.left - margin.right;
-const innerH = height - margin.top - margin.bottom;
-
-// Shared highlight state (year-range) across all charts.
-// Brush any chart to focus; click empty space to clear.
-const highlightBus = d3.dispatch("highlight");
-let activeYearRange = null; // [y0, y1] inclusive, integers
-
-function clampYearRange(range) {
-  if (!range) return null;
-  const y0 = Math.min(range[0], range[1]);
-  const y1 = Math.max(range[0], range[1]);
-  // Keep continuous values so the brush window matches the user's drag.
-  return [y0, y1];
+function fmtTemp(c) {
+  return tempUnit === 'F'
+    ? `${((c * 9 / 5) + 32).toFixed(1)}°F`
+    : `${c.toFixed(1)}°C`;
 }
 
-function setYearHighlight(range, source) {
-  activeYearRange = range ? clampYearRange(range) : null;
-  highlightBus.call("highlight", null, { range: activeYearRange, source });
-}
-
-function addHighlightOverlays(g) {
-  const overlay = g.append("g").attr("class", "highlight-overlays");
-  const shadeLeft = overlay.append("rect").attr("class", "highlight-shade");
-  const shadeRight = overlay.append("rect").attr("class", "highlight-shade");
-  const windowRect = overlay.append("rect").attr("class", "highlight-window");
-
-  function update(xScale, range) {
-    if (!range) {
-      shadeLeft.attr("width", 0);
-      shadeRight.attr("width", 0);
-      windowRect.attr("width", 0);
-      return;
-    }
-
-    const x0 = xScale(range[0]);
-    const x1 = xScale(range[1]);
-    const left = Math.max(0, Math.min(x0, x1));
-    const right = Math.min(innerW, Math.max(x0, x1));
-    const w = Math.max(0, right - left);
-
-    shadeLeft.attr("x", 0).attr("y", 0).attr("width", left).attr("height", innerH);
-    shadeRight
-      .attr("x", right)
-      .attr("y", 0)
-      .attr("width", Math.max(0, innerW - right))
-      .attr("height", innerH);
-    windowRect.attr("x", left).attr("y", 0).attr("width", w).attr("height", innerH);
-  }
-
-  return { update };
-}
-
-function addMinMaxLabels(g) {
-  const layer = g.append("g").attr("class", "minmax-layer");
-  const minG = layer.append("g").attr("class", "minmax min");
-  const maxG = layer.append("g").attr("class", "minmax max");
-
-  minG.append("circle").attr("r", 4).attr("class", "minmax-dot");
-  minG.append("text").attr("class", "minmax-label").attr("dy", -8);
-
-  maxG.append("circle").attr("r", 4).attr("class", "minmax-dot");
-  maxG.append("text").attr("class", "minmax-label").attr("dy", -8);
-
-  function hide() {
-    minG.style("display", "none");
-    maxG.style("display", "none");
-  }
-
-  function showOne(group, x, y, text, anchor = "middle") {
-    group.style("display", null);
-    group.attr("transform", `translate(${x},${y})`);
-    group.select("text").attr("text-anchor", anchor).text(text);
-  }
-
-  return { hide, showOne, minG, maxG };
-}
-
-function minMaxInRange(data, range, getYear, getValue) {
-  if (!range) return null;
-  // Snap only for filtering points by whole-year data.
-  let lo = Math.ceil(Math.min(range[0], range[1]));
-  let hi = Math.floor(Math.max(range[0], range[1]));
-  // If the selection is narrower than 1 year, snap to nearest year.
-  if (lo > hi) {
-    const snap = Math.round((range[0] + range[1]) / 2);
-    lo = snap;
-    hi = snap;
-  }
-
-  const filtered = data.filter((d) => {
-    const y = getYear(d);
-    const v = getValue(d);
-    return Number.isFinite(y) && Number.isFinite(v) && y >= lo && y <= hi;
-  });
-  if (!filtered.length) return null;
-
-  // Compute robust min/max points by explicit numeric comparisons.
-  let minPoint = filtered[0];
-  let maxPoint = filtered[0];
-  for (let i = 1; i < filtered.length; i += 1) {
-    const p = filtered[i];
-    if (getValue(p) < getValue(minPoint)) minPoint = p;
-    if (getValue(p) > getValue(maxPoint)) maxPoint = p;
-  }
-  return { minD: minPoint, maxD: maxPoint };
-}
-
-function addSharedBrush(g, xScale, source) {
-  let syncing = false;
-  const brush = d3.brushX()
-    .extent([[0, 0], [innerW, innerH]])
-    .on("end", (event) => {
-      // Ignore programmatic brush moves triggered by cross-chart syncing.
-      if (syncing) return;
-
-      if (!event.selection) {
-        setYearHighlight(null, source);
-        return;
-      }
-      const [px0, px1] = event.selection;
-      const y0 = xScale.invert(px0);
-      const y1 = xScale.invert(px1);
-      setYearHighlight([y0, y1], source);
-    });
-
-  const gb = g.append("g").attr("class", "brush").call(brush);
-
-  // Double-click inside plot area clears highlight.
-  // (Single click fires after a brush drag ends, which would clear immediately.)
-  g.append("rect")
-    .attr("class", "brush-click-catcher")
-    .attr("x", 0)
-    .attr("y", 0)
-    .attr("width", innerW)
-    .attr("height", innerH)
-    .attr("fill", "transparent")
-    .lower()
-    .on("dblclick", () => setYearHighlight(null, source));
-
-  // Sync brush position when highlight changes elsewhere.
-  // IMPORTANT: d3-dispatch namespaces are `type.name` (single dot).
-  // Use distinct names so we don't overwrite other listeners.
-  highlightBus.on(`highlight.${source}BrushSync`, ({ range, source: src }) => {
-    if (src === source) return;
-    if (!range) {
-      syncing = true;
-      gb.call(brush.move, null);
-      syncing = false;
-      return;
-    }
-    syncing = true;
-    gb.call(brush.move, [xScale(range[0]), xScale(range[1])]);
-    syncing = false;
-  });
-}
-
-function baseSvg(container, title) {
-  return d3.select(container)
-    .append("svg")
-    .attr("viewBox", `0 0 ${width} ${height}`)
-    .attr("role", "img")
-    .attr("aria-label", title)
-    .append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
-}
-
-function addAxes(g, xScale, yScale, xLabel, yLabel) {
-  g.append("g")
-    .attr("class", "axis")
-    .attr("transform", `translate(0,${innerH})`)
-    .call(d3.axisBottom(xScale).ticks(8))
-    .append("text")
-    .attr("class", "axis-label")
-    .attr("x", innerW / 2)
-    .attr("y", 36)
-    .attr("fill", "currentColor")
-    .attr("text-anchor", "middle")
-    .text(xLabel);
-
-  g.append("g")
-    .attr("class", "axis")
-    .call(d3.axisLeft(yScale))
-    .append("text")
-    .attr("class", "axis-label")
-    .attr("transform", "rotate(-90)")
-    .attr("x", -innerH / 2)
-    .attr("y", -44)
-    .attr("fill", "currentColor")
-    .attr("text-anchor", "middle")
-    .text(yLabel);
-}
-
-function addGrid(g, yScale) {
-  g.append("g")
-    .attr("class", "grid")
-    .call(
-      d3.axisLeft(yScale)
-        .tickSize(-innerW)
-        .tickFormat("")
-    )
-    .lower();
+function cToDisplay(c) {
+  return tempUnit === 'F' ? (c * 9 / 5 + 32) : c;
 }
 
 /* ── HERO: Morphing seasonal curve ──────────────────────────────────── */
@@ -278,9 +84,9 @@ function chartSeasonalCurve(rawData) {
 
   tSvg.append('g').attr('class', 'grid').attr('transform', `translate(${xLeft},0)`)
     .call(d3.axisLeft(tY).tickSize(-iW).tickFormat('').ticks(5)).lower();
-  tSvg.append('g').attr('class', 'axis').attr('transform', `translate(${xLeft},0)`)
-    .call(d3.axisLeft(tY).ticks(5))
-    .append('text').attr('class', 'axis-label')
+  const tYAxisG = tSvg.append('g').attr('class', 'axis').attr('transform', `translate(${xLeft},0)`)
+    .call(d3.axisLeft(tY).ticks(5));
+  tYAxisG.append('text').attr('class', 'axis-label')
     .attr('transform', 'rotate(-90)').attr('x', -(tBot - tTop) / 2 - tTop).attr('y', -44)
     .attr('fill', 'currentColor').attr('text-anchor', 'middle').text('°C');
   tSvg.append('g').attr('class', 'axis').attr('transform', `translate(0,${tBot})`)
@@ -407,9 +213,10 @@ function chartSeasonalCurve(rawData) {
 
   // ── Month trend mini chart (temperature only) ─────────────────────
   function showMonthTrend(monthIdx) {
-    const pts = years.map(yr => ({ year: yr, temp: byYear.get(yr).temps[monthIdx] }));
+    const rawPts = years.map(yr => ({ year: yr, temp: byYear.get(yr).temps[monthIdx] }));
+    const pts = rawPts.map(d => ({ year: d.year, val: cToDisplay(d.temp), rawTemp: d.temp }));
     const curYr = Math.round(+d3.select('#year-slider-t').property('value'));
-    const mean = d3.mean(pts, d => d.temp);
+    const mean = d3.mean(pts, d => d.val);
 
     d3.select('#month-trend-title').text(`${MONTHS[monthIdx]}: temperature every year, 1925-2014`);
     d3.select('#month-trend-panel').classed('hidden', false);
@@ -424,8 +231,9 @@ function chartSeasonalCurve(rawData) {
       .append('g').attr('transform', `translate(${mM.left},${mM.top})`);
 
     const mX = d3.scaleLinear().domain([YEAR_MIN, YEAR_MAX]).range([0, mIW]);
+    const pad = tempUnit === 'F' ? 0.8 : 0.4;
     const mY = d3.scaleLinear()
-      .domain(d3.extent(pts, d => d.temp).map((v, i) => v + (i === 0 ? -0.4 : 0.4)))
+      .domain(d3.extent(pts, d => d.val).map((v, i) => v + (i === 0 ? -pad : pad)))
       .range([mIH, 0]).nice();
 
     mSvg.append('line').attr('x1', 0).attr('x2', mIW)
@@ -439,17 +247,17 @@ function chartSeasonalCurve(rawData) {
       .call(d3.axisLeft(mY).ticks(4))
       .append('text').attr('class', 'axis-label')
       .attr('transform', 'rotate(-90)').attr('x', -mIH / 2).attr('y', -40)
-      .attr('fill', 'currentColor').attr('text-anchor', 'middle').text('C');
+      .attr('fill', 'currentColor').attr('text-anchor', 'middle').text(tempUnit === 'F' ? '°F' : '°C');
     mSvg.append('path').datum(pts)
       .attr('fill', 'none').attr('stroke', '#9bb3c9').attr('stroke-width', 1.2)
-      .attr('d', d3.line().x(d => mX(d.year)).y(d => mY(d.temp)).curve(d3.curveCatmullRom));
+      .attr('d', d3.line().x(d => mX(d.year)).y(d => mY(d.val)).curve(d3.curveCatmullRom));
     const cur = pts.find(d => d.year === curYr);
     if (cur) {
-      mSvg.append('circle').attr('cx', mX(cur.year)).attr('cy', mY(cur.temp))
+      mSvg.append('circle').attr('cx', mX(cur.year)).attr('cy', mY(cur.val))
         .attr('r', 5).attr('fill', '#c44e52').attr('stroke', '#fff').attr('stroke-width', 1.5);
-      mSvg.append('text').attr('x', mX(cur.year)).attr('y', mY(cur.temp) - 9)
+      mSvg.append('text').attr('x', mX(cur.year)).attr('y', mY(cur.val) - 9)
         .attr('text-anchor', 'middle').attr('font-size', 10).attr('fill', '#c44e52')
-        .text(`${cur.year}: ${cur.temp.toFixed(1)}C`);
+        .text(`${cur.year}: ${fmtTemp(cur.rawTemp)}`);
     }
   }
 
@@ -549,11 +357,11 @@ function chartSeasonalCurve(rawData) {
       const yr = Math.round(+d3.select('#year-slider-t').property('value'));
       const { temps } = byYear.get(Math.min(yr, YEAR_MAX));
       tooltip.style('opacity', 1).html(
-        `<strong>${MONTHS[i]} ${yr}</strong><br>Temp: ${temps[i].toFixed(1)} °C`
+        `<strong>${MONTHS[i]} ${yr}</strong><br>Temp: ${fmtTemp(temps[i])}`
       );
     })
     .on('mousemove', e => tooltip
-      .style('left', (e.pageX + 14) + 'px').style('top', (e.pageY - 36) + 'px'))
+      .style('left', (e.clientX + 14) + 'px').style('top', (e.clientY - 36) + 'px'))
     .on('mouseout', () => tooltip.style('opacity', 0))
     .on('click', function(event, i) {
       activeDotIdx = i;
@@ -571,7 +379,7 @@ function chartSeasonalCurve(rawData) {
       );
     })
     .on('mousemove', e => tooltip
-      .style('left', (e.pageX + 14) + 'px').style('top', (e.pageY - 36) + 'px'))
+      .style('left', (e.clientX + 14) + 'px').style('top', (e.clientY - 36) + 'px'))
     .on('mouseout', () => tooltip.style('opacity', 0));
 
   d3.select('#month-trend-close').on('click', () => {
@@ -582,384 +390,15 @@ function chartSeasonalCurve(rawData) {
 
   renderTemp(YEAR_MIN);
   renderPrecip(YEAR_MIN);
+
+  _updateTempSeasonalUnit = function() {
+    tYAxisG.call(d3.axisLeft(tY).ticks(5).tickFormat(c =>
+      tempUnit === 'F' ? Math.round(c * 9 / 5 + 32) : c
+    ));
+    tYAxisG.select('text.axis-label').text(tempUnit === 'F' ? '°F' : '°C');
+  };
 }
 
-
-/* 1. Annual mean temperature trend */
-function chartAnnualTemperature(data) {
-  const g = baseSvg("#chart-annual-temp", "Annual mean near-surface temperature near San Diego, 1925–2014");
-
-  const x = d3.scaleLinear()
-    .domain(d3.extent(data, (d) => d.year))
-    .range([0, innerW]);
-
-  const y = d3.scaleLinear()
-    .domain(d3.extent(data, (d) => d.mean_temp_c).map((v, i) => v + (i === 0 ? -0.4 : 0.4)))
-    .nice()
-    .range([innerH, 0]);
-
-  addGrid(g, y);
-  addAxes(g, x, y, "Year", "Mean temperature (°C)");
-
-  const line = d3.line()
-    .x((d) => x(d.year))
-    .y((d) => y(d.mean_temp_c));
-
-  const rolling = data.map((_, i, arr) => {
-    const start = Math.max(0, i - 4);
-    const slice = arr.slice(start, i + 1);
-    const mean = d3.mean(slice, (d) => d.mean_temp_c);
-    return { year: arr[i].year, rolling: mean };
-  });
-
-  g.append("path")
-    .datum(data)
-    .attr("fill", "none")
-    .attr("stroke", "#9bb3c9")
-    .attr("stroke-width", 1.5)
-    .attr("d", line);
-
-  g.append("path")
-    .datum(rolling)
-    .attr("fill", "none")
-    .attr("stroke", "#0b6e99")
-    .attr("stroke-width", 2.5)
-    .attr("d", d3.line().x((d) => x(d.year)).y((d) => y(d.rolling)));
-
-  g.selectAll("circle")
-    .data(data.filter((_, i) => i % 5 === 0))
-    .join("circle")
-    .attr("class", "annual-point")
-    .attr("cx", (d) => x(d.year))
-    .attr("cy", (d) => y(d.mean_temp_c))
-    .attr("r", 3)
-    .attr("fill", "#0b6e99")
-    .attr("opacity", 0.75);
-
-  g.append("text")
-    .attr("x", innerW)
-    .attr("y", 12)
-    .attr("text-anchor", "end")
-    .attr("fill", "#5c6b7a")
-    .attr("font-size", 11)
-    .text("Blue line: 5-year moving average");
-
-  const overlays = addHighlightOverlays(g);
-  const minmax = addMinMaxLabels(g);
-  addSharedBrush(g, x, "annualTemp");
-  highlightBus.on("highlight.annualTempRender", ({ range }) => {
-    overlays.update(x, range);
-    g.selectAll("circle.annual-point")
-      .classed("dim", (d) => !!range && (d.year < range[0] || d.year > range[1]));
-
-    const mm = minMaxInRange(data, range, (d) => d.year, (d) => d.mean_temp_c);
-    if (!mm) {
-      minmax.hide();
-      return;
-    }
-
-    const fmt = d3.format(".2f");
-    minmax.showOne(minmax.minG, x(mm.minD.year), y(mm.minD.mean_temp_c), `min ${fmt(mm.minD.mean_temp_c)}°C`);
-    minmax.showOne(minmax.maxG, x(mm.maxD.year), y(mm.maxD.mean_temp_c), `max ${fmt(mm.maxD.mean_temp_c)}°C`);
-  });
-  overlays.update(x, activeYearRange);
-  minmax.hide();
-}
-
-/* 2. Temperature anomaly from 1961–1990 baseline */
-function chartTemperatureAnomaly(data) {
-  const g = baseSvg("#chart-anomaly", "Annual temperature anomaly relative to 1961–1990 baseline");
-
-  const x = d3.scaleLinear()
-    .domain(d3.extent(data, (d) => d.year))
-    .range([0, innerW]);
-
-  const maxAbs = d3.max(data, (d) => Math.abs(d.temp_anomaly_c));
-  const y = d3.scaleLinear()
-    .domain([-maxAbs * 1.1, maxAbs * 1.1])
-    .range([innerH, 0]);
-
-  addGrid(g, y);
-  addAxes(g, x, y, "Year", "Anomaly (°C)");
-
-  g.append("line")
-    .attr("x1", 0)
-    .attr("x2", innerW)
-    .attr("y1", y(0))
-    .attr("y2", y(0))
-    .attr("stroke", "#1a2332")
-    .attr("stroke-dasharray", "4 4");
-
-  g.selectAll("rect.bar")
-    .data(data)
-    .join("rect")
-    .attr("class", "bar")
-    .attr("x", (d) => x(d.year) - 3)
-    .attr("width", 6)
-    .attr("y", (d) => (d.temp_anomaly_c >= 0 ? y(d.temp_anomaly_c) : y(0)))
-    .attr("height", (d) => Math.abs(y(d.temp_anomaly_c) - y(0)))
-    .attr("fill", (d) => (d.temp_anomaly_c >= 0 ? "#c44e52" : "#2a7f62"));
-
-  const overlays = addHighlightOverlays(g);
-  const minmax = addMinMaxLabels(g);
-  addSharedBrush(g, x, "tempAnom");
-  highlightBus.on("highlight.tempAnomRender", ({ range }) => {
-    overlays.update(x, range);
-    g.selectAll("rect.bar")
-      .classed("dim", (d) => !!range && (d.year < range[0] || d.year > range[1]));
-
-    const mm = minMaxInRange(data, range, (d) => d.year, (d) => d.temp_anomaly_c);
-    if (!mm) {
-      minmax.hide();
-      return;
-    }
-
-    const fmt = d3.format("+.2f");
-    minmax.showOne(minmax.minG, x(mm.minD.year), y(mm.minD.temp_anomaly_c), `min ${fmt(mm.minD.temp_anomaly_c)}°C`);
-    minmax.showOne(minmax.maxG, x(mm.maxD.year), y(mm.maxD.temp_anomaly_c), `max ${fmt(mm.maxD.temp_anomaly_c)}°C`);
-  });
-  overlays.update(x, activeYearRange);
-  minmax.hide();
-}
-
-/* 3. Modeled sea surface height anomaly (CMIP6 zos) */
-function chartSeaLevel(data) {
-  const g = baseSvg("#chart-sea-level", "Annual sea surface height anomaly near San Diego coast, 1925–2014");
-
-  const x = d3.scaleLinear()
-    .domain(d3.extent(data, (d) => d.year))
-    .range([0, innerW]);
-
-  const maxAbs = d3.max(data, (d) => Math.abs(d.zos_anomaly_mm));
-  const y = d3.scaleLinear()
-    .domain([-maxAbs * 1.15, maxAbs * 1.15])
-    .range([innerH, 0]);
-
-  addGrid(g, y);
-  addAxes(g, x, y, "Year", "Anomaly vs 1961–1990 (mm)");
-
-  g.append("line")
-    .attr("x1", 0)
-    .attr("x2", innerW)
-    .attr("y1", y(0))
-    .attr("y2", y(0))
-    .attr("stroke", "#1a2332")
-    .attr("stroke-dasharray", "4 4");
-
-  const line = d3.line()
-    .x((d) => x(d.year))
-    .y((d) => y(d.zos_anomaly_mm));
-
-  const rolling = data.map((_, i, arr) => {
-    const start = Math.max(0, i - 4);
-    const slice = arr.slice(start, i + 1);
-    return {
-      year: arr[i].year,
-      rolling: d3.mean(slice, (d) => d.zos_anomaly_mm),
-    };
-  });
-
-  g.append("path")
-    .datum(data)
-    .attr("fill", "none")
-    .attr("stroke", "#9bb3c9")
-    .attr("stroke-width", 1.5)
-    .attr("d", line);
-
-  g.append("path")
-    .datum(rolling)
-    .attr("fill", "none")
-    .attr("stroke", "#1a5f7a")
-    .attr("stroke-width", 2.5)
-    .attr("d", d3.line().x((d) => x(d.year)).y((d) => y(d.rolling)));
-
-  g.append("text")
-    .attr("x", innerW)
-    .attr("y", 12)
-    .attr("text-anchor", "end")
-    .attr("fill", "#5c6b7a")
-    .attr("font-size", 11)
-    .text("Teal: 5-year moving average");
-
-  const overlays = addHighlightOverlays(g);
-  const minmax = addMinMaxLabels(g);
-  addSharedBrush(g, x, "seaLevel");
-  highlightBus.on("highlight.seaLevelRender", ({ range }) => {
-    overlays.update(x, range);
-
-    const mm = minMaxInRange(data, range, (d) => d.year, (d) => d.zos_anomaly_mm);
-    if (!mm) {
-      minmax.hide();
-      return;
-    }
-
-    const fmt = d3.format("+.1f");
-    minmax.showOne(minmax.minG, x(mm.minD.year), y(mm.minD.zos_anomaly_mm), `min ${fmt(mm.minD.zos_anomaly_mm)} mm`);
-    minmax.showOne(minmax.maxG, x(mm.maxD.year), y(mm.maxD.zos_anomaly_mm), `max ${fmt(mm.maxD.zos_anomaly_mm)} mm`);
-  });
-  overlays.update(x, activeYearRange);
-  minmax.hide();
-}
-
-/* 4. Annual precipitation */
-function chartPrecipitation(data) {
-  const g = baseSvg("#chart-precip", "Modeled annual precipitation near San Diego");
-
-  const x = d3.scaleBand()
-    .domain(data.map((d) => d.year))
-    .range([0, innerW])
-    .padding(0.08);
-
-  const xYear = d3.scaleLinear()
-    .domain(d3.extent(data, (d) => d.year))
-    .range([0, innerW]);
-
-  const y = d3.scaleLinear()
-    .domain([0, d3.max(data, (d) => d.total_precip_mm) * 1.05])
-    .range([innerH, 0]);
-
-  addGrid(g, y);
-
-  g.append("g")
-    .attr("class", "axis")
-    .attr("transform", `translate(0,${innerH})`)
-    .call(d3.axisBottom(x).tickValues(x.domain().filter((y) => y % 10 === 0)))
-    .append("text")
-    .attr("class", "axis-label")
-    .attr("x", innerW / 2)
-    .attr("y", 36)
-    .attr("fill", "currentColor")
-    .attr("text-anchor", "middle")
-    .text("Year");
-
-  g.append("g")
-    .attr("class", "axis")
-    .call(d3.axisLeft(y))
-    .append("text")
-    .attr("class", "axis-label")
-    .attr("transform", "rotate(-90)")
-    .attr("x", -innerH / 2)
-    .attr("y", -44)
-    .attr("fill", "currentColor")
-    .attr("text-anchor", "middle")
-    .text("Annual total (mm)");
-
-  const baseline = data[0]?.precip_baseline_mm ?? d3.mean(data, (d) => d.total_precip_mm);
-
-  g.append("line")
-    .attr("x1", 0)
-    .attr("x2", innerW)
-    .attr("y1", y(baseline))
-    .attr("y2", y(baseline))
-    .attr("stroke", "#c44e52")
-    .attr("stroke-dasharray", "5 4");
-
-  g.selectAll("rect")
-    .data(data)
-    .join("rect")
-    .attr("class", "precip-bar")
-    .attr("x", (d) => x(d.year))
-    .attr("width", x.bandwidth())
-    .attr("y", (d) => y(d.total_precip_mm))
-    .attr("height", (d) => innerH - y(d.total_precip_mm))
-    .attr("fill", (d) => (d.total_precip_mm >= baseline ? "#4a90a4" : "#7ba38c"));
-
-  const overlays = addHighlightOverlays(g);
-  const minmax = addMinMaxLabels(g);
-  addSharedBrush(g, xYear, "precip");
-  highlightBus.on("highlight.precipRender", ({ range }) => {
-    overlays.update(xYear, range);
-    g.selectAll("rect.precip-bar")
-      .classed("dim", (d) => !!range && (d.year < range[0] || d.year > range[1]));
-
-    const mm = minMaxInRange(data, range, (d) => d.year, (d) => d.total_precip_mm);
-    if (!mm) {
-      minmax.hide();
-      return;
-    }
-
-    const fmt = d3.format(".0f");
-    const xMin = xYear(mm.minD.year);
-    const xMax = xYear(mm.maxD.year);
-    minmax.showOne(minmax.minG, xMin, y(mm.minD.total_precip_mm), `min ${fmt(mm.minD.total_precip_mm)} mm`);
-    minmax.showOne(minmax.maxG, xMax, y(mm.maxD.total_precip_mm), `max ${fmt(mm.maxD.total_precip_mm)} mm`);
-  });
-  overlays.update(xYear, activeYearRange);
-  minmax.hide();
-}
-
-/* 5. San Diego County population density (U.S. Census) */
-function chartPopulationDensity(annual, census) {
-  const g = baseSvg("#chart-population", "San Diego County population density, 1925–2014");
-
-  const x = d3.scaleLinear()
-    .domain([START_YEAR, END_YEAR])
-    .range([0, innerW]);
-
-  const y = d3.scaleLinear()
-    .domain([0, d3.max(annual, (d) => d.density_per_sq_mi) * 1.08])
-    .nice()
-    .range([innerH, 0]);
-
-  addGrid(g, y);
-  addAxes(g, x, y, "Year", "People per square mile");
-
-  const area = d3.area()
-    .x((d) => x(d.year))
-    .y0(innerH)
-    .y1((d) => y(d.density_per_sq_mi));
-
-  g.append("path")
-    .datum(annual)
-    .attr("fill", "#4a90a4")
-    .attr("fill-opacity", 0.35)
-    .attr("stroke", "#1a5f7a")
-    .attr("stroke-width", 2)
-    .attr("d", area);
-
-  g.selectAll("circle.census")
-    .data(census)
-    .join("circle")
-    .attr("class", "census")
-    .attr("cx", (d) => x(d.year))
-    .attr("cy", (d) => y(d.density_per_sq_mi))
-    .attr("r", 5)
-    .attr("fill", "#c44e52")
-    .attr("stroke", "#fff")
-    .attr("stroke-width", 1.5);
-
-  g.append("text")
-    .attr("x", innerW)
-    .attr("y", 12)
-    .attr("text-anchor", "end")
-    .attr("fill", "#5c6b7a")
-    .attr("font-size", 11)
-    .text("Red dots: U.S. Census years");
-
-  const overlays = addHighlightOverlays(g);
-  const minmax = addMinMaxLabels(g);
-  addSharedBrush(g, x, "population");
-  highlightBus.on("highlight.populationRender", ({ range }) => {
-    overlays.update(x, range);
-    g.selectAll("circle.census")
-      .classed("dim", (d) => !!range && (d.year < range[0] || d.year > range[1]));
-
-    const mm = minMaxInRange(annual, range, (d) => d.year, (d) => d.density_per_sq_mi);
-    if (!mm) {
-      minmax.hide();
-      return;
-    }
-
-    const fmt = d3.format(".0f");
-    minmax.showOne(minmax.minG, x(mm.minD.year), y(mm.minD.density_per_sq_mi), `min ${fmt(mm.minD.density_per_sq_mi)}`);
-    minmax.showOne(minmax.maxG, x(mm.maxD.year), y(mm.maxD.density_per_sq_mi), `max ${fmt(mm.maxD.density_per_sq_mi)}`);
-  });
-  overlays.update(x, activeYearRange);
-  minmax.hide();
-}
-
-const START_YEAR = 1925;
-const END_YEAR = 2014;
 
 /* ── Cloud cover seasonal chart ────────────────────────────────────── */
 function chartCloudCurve(rawData) {
@@ -1149,7 +588,7 @@ function chartCloudCurve(rawData) {
         `Sunshine: ~${(100 - clt[i]).toFixed(0)}%`
       );
     })
-    .on('mousemove', e => tooltip.style('left', (e.pageX + 14) + 'px').style('top', (e.pageY - 36) + 'px'))
+    .on('mousemove', e => tooltip.style('left', (e.clientX + 14) + 'px').style('top', (e.clientY - 36) + 'px'))
     .on('mouseout', () => tooltip.style('opacity', 0));
 
   // Hide the "run script" note since data loaded
@@ -1175,6 +614,15 @@ function chartVisitRecommendation(rawData, cloudByYear) {
     clt:    null,
   }));
 
+  // Recent decade (2005-2014) averages
+  const RECENT_START = 2005;
+  const recentMonthAvg = d3.range(12).map(i => ({
+    month:  i + 1,
+    temp:   d3.mean(rawData.filter(d => d.year >= RECENT_START && d.month === i + 1), d => d.temp_c),
+    precip: d3.mean(rawData.filter(d => d.year >= RECENT_START && d.month === i + 1), d => d.precip_mm),
+    clt:    null,
+  }));
+
   let cloudAvailable = false;
 
   function applyCloudMeans(rows) {
@@ -1185,6 +633,13 @@ function chartVisitRecommendation(rawData, cloudByYear) {
         monthAvg[i].clt = row.clt_pct;
       }
     });
+    // Also compute recent cloud from per-year data
+    if (cloudByYear) {
+      d3.range(12).forEach(i => {
+        const recent = cloudByYear.filter(d => d.year >= RECENT_START && d.month === i + 1);
+        if (recent.length) recentMonthAvg[i].clt = d3.mean(recent, d => d.clt_pct);
+      });
+    }
     cloudAvailable = true;
     d3.select('#cloud-note').text('');
     d3.select('#sun-pref-row').style('display', null);
@@ -1208,187 +663,138 @@ function chartVisitRecommendation(rawData, cloudByYear) {
       }
     });
 
-  // Preference state (0–1)
-  let prefWarm = 0.5;   // 0 = loves cold, 1 = loves heat
-  let prefDry  = 0.4;   // 0 = rain is fine, 1 = must be dry
-  let prefSun  = 0.5;   // 0 = love cloudy, 1 = love sunny
+  // Preference state
+  const FIRE_THRESHOLD = 27;  // °C — hardcoded env. threshold, not user-adjustable
+  let prefTemp = 24;  // user's ideal outdoor temperature
+  let prefDry  = 0.4;
+  let prefSun  = 0.5;
 
-  const ACTIVITY_COLOR = { beach: '#f4a261', hike: '#52b788', home: '#aac4d4' };
-  const ACTIVITY_LABEL = { beach: 'Beach', hike: 'Hiking', home: 'Indoors' };
+  const ACTIVITY_COLOR = {
+    beach: '#f4a261', hike: '#52b788', home: '#aac4d4',
+    fire:  '#e63946', storm: '#457b9d',
+  };
+  const ACTIVITY_LABEL = {
+    beach: 'Beach', hike: 'Hiking', home: 'Indoors',
+    fire: 'Fire Risk', storm: 'Storm Risk',
+  };
 
   function getActivity(m) {
     const { temp, precip, clt } = m;
+    const presentMean = meanPrecip[m.month - 1];
+    const idealLo  = prefTemp - 8;
+    const comfortHi = prefTemp + 2;
 
-    const idealLo = 14 + prefWarm * 8;
-    const idealHi = idealLo + 10;
+    if (precip > presentMean * 2.5) return 'storm';
+    if (temp > FIRE_THRESHOLD && precip < 5) return 'fire';
+
     const tempScore = temp < idealLo
-      ? Math.max(0, 1 - (idealLo - temp) / 12)
-      : Math.max(0, 1 - (temp - idealHi) / 8);
+      ? Math.max(0, 1 - (idealLo - temp) / 8)
+      : temp > comfortHi
+      ? Math.max(0, 1 - (temp - comfortHi) / 4)
+      : 1.0;
 
     const wetPenalty = Math.max(0, 1 - Math.exp(-precip / 25)) * prefDry;
     const sunPenalty = clt !== null ? Math.max(0, 1 - Math.exp(-clt / 40)) * prefSun : 0;
-    const outdoorScore = tempScore * (1 - wetPenalty * 0.8) * (1 - sunPenalty * 0.7);
+    const score = tempScore * (1 - wetPenalty * 0.8) * (1 - sunPenalty * 0.7);
 
-    if (outdoorScore < 0.25) return 'home';
-    if (temp > 19 + prefWarm * 5) return 'beach';
+    if (score < 0.25) return 'home';
+    if (temp >= 20) return 'beach';
     return 'hike';
   }
 
-  // ── SVG ────────────────────────────────────────────────────────────
-  const W = 900, H = 200;
-  const cardW = 68, cardH = 148;
-  const gap = 4;
-  const totalW = 12 * cardW + 11 * gap;
-  const startX = (W - totalW) / 2;
-  const startY = 20;
+  // ── Two-row SVG: 90-year avg (top) + recent 2005-2014 (bottom) ────
+  const W = 900;
+  const cardW = 68, cardH = 100, gap = 4;
+  const totalW = 12 * cardW + 11 * gap;   // 860
+  const startX = (W - totalW) / 2;        // 20
+  const row1LabelY = 14, row1CardsY = 30;
+  const row2LabelY = row1CardsY + cardH + 22;
+  const row2CardsY = row2LabelY + 18;
+  const svgH = row2CardsY + cardH + 14;
 
   const svg = d3.select('#chart-visit-rec')
-    .append('svg').attr('viewBox', `0 0 ${W} ${H}`)
-    .attr('role', 'img')
-    .attr('aria-label', 'Monthly visit recommendations for San Diego');
+    .append('svg').attr('viewBox', `0 0 ${W} ${svgH}`)
+    .attr('role', 'img').attr('aria-label', 'Monthly activity recommendations, two time windows');
 
-  // Fixed scale across all years so bar width stays consistent
-  const allTemps = rawData.map(d => d.temp_c);
-  const barScale = d3.scaleLinear()
-    .domain([d3.min(allTemps) - 1, d3.max(allTemps) + 1])
-    .range([0, cardW - 16]);
+  svg.append('text').attr('x', startX).attr('y', row1LabelY + 11)
+    .attr('font-size', 11).attr('font-weight', '600').attr('fill', '#5c6b7a')
+    .text('90-year average (1925–2014)');
+  svg.append('text').attr('x', startX).attr('y', row2LabelY + 11)
+    .attr('font-size', 11).attr('font-weight', '600').attr('fill', '#0b6e99')
+    .text('Recent decade (2005–2014)');
 
-  const cards = svg.selectAll('g.month-card')
-    .data(monthAvg).join('g')
-    .attr('class', 'month-card')
-    .attr('transform', (_, i) => `translate(${startX + i * (cardW + gap)},${startY})`);
+  function makeCardRow(data, cardsY, cls) {
+    const g = svg.selectAll(`g.${cls}`)
+      .data(data).join('g').attr('class', cls)
+      .attr('transform', (_, i) => `translate(${startX + i * (cardW + gap)},${cardsY})`);
 
-  cards.append('rect').attr('class', 'rec-card-bg')
-    .attr('width', cardW).attr('height', cardH).attr('rx', 6);
+    g.append('rect').attr('class', `${cls}-bg`)
+      .attr('width', cardW).attr('height', cardH).attr('rx', 5);
+    g.append('text').attr('x', cardW / 2).attr('y', 14).attr('text-anchor', 'middle')
+      .attr('font-size', 10).attr('font-weight', '700').attr('fill', '#1a2332')
+      .text(d => MONTHS[d.month - 1]);
+    g.append('text').attr('class', `${cls}-act`)
+      .attr('x', cardW / 2).attr('y', 32).attr('text-anchor', 'middle')
+      .attr('font-size', 9).attr('font-weight', '600').attr('fill', '#1a2332');
+    g.append('text').attr('class', `${cls}-temp`)
+      .attr('x', cardW / 2).attr('y', 48).attr('text-anchor', 'middle')
+      .attr('font-size', 8).attr('fill', '#3d4f5e');
+    g.append('rect').attr('x', 8).attr('y', 55)
+      .attr('width', cardW - 16).attr('height', 3).attr('rx', 1.5)
+      .attr('fill', 'rgba(26,35,50,0.12)');
+    g.append('text').attr('class', `${cls}-precip`)
+      .attr('x', cardW / 2).attr('y', 74).attr('text-anchor', 'middle')
+      .attr('font-size', 8).attr('fill', '#5c6b7a');
+    return g;
+  }
 
-  cards.append('text').attr('class', 'rec-month')
-    .attr('x', cardW / 2).attr('y', 17)
-    .attr('text-anchor', 'middle')
-    .attr('font-size', 11).attr('font-weight', '700').attr('fill', '#1a2332')
-    .text(d => MONTHS[d.month - 1]);
-
-  cards.append('text').attr('class', 'rec-act')
-    .attr('x', cardW / 2).attr('y', 58)
-    .attr('text-anchor', 'middle')
-    .attr('font-size', 10).attr('font-weight', '600').attr('fill', '#1a2332');
-
-  cards.append('text').attr('class', 'rec-temp')
-    .attr('x', cardW / 2).attr('y', 82)
-    .attr('text-anchor', 'middle')
-    .attr('font-size', 9).attr('fill', '#3d4f5e');
-
-  cards.append('rect')
-    .attr('x', 8).attr('y', 89)
-    .attr('width', cardW - 16).attr('height', 4)
-    .attr('rx', 2).attr('fill', 'rgba(26,35,50,0.1)');
-
-  cards.append('rect').attr('class', 'rec-bar')
-    .attr('x', 8).attr('y', 89).attr('height', 4).attr('rx', 2);
-
-  cards.append('text').attr('class', 'rec-precip')
-    .attr('x', cardW / 2).attr('y', 110)
-    .attr('text-anchor', 'middle')
-    .attr('font-size', 8).attr('fill', '#5c6b7a');
-
-  cards.append('text').attr('class', 'rec-sun')
-    .attr('x', cardW / 2).attr('y', 126)
-    .attr('text-anchor', 'middle')
-    .attr('font-size', 8)
-    .style('display', 'none');
+  const histCards   = makeCardRow(monthAvg,      row1CardsY, 'hist-card');
+  const recentCards = makeCardRow(recentMonthAvg, row2CardsY, 'recent-card');
 
   // Tooltip
   const tip = d3.select('.tooltip');
-  cards
-    .style('cursor', 'default')
-    .on('mouseover', function(event, d) {
-      const act = getActivity(d);
-      tip.style('opacity', 1).html(
-        `<strong>${MONTHS[d.month - 1]}</strong><br>` +
-        `${ACTIVITY_LABEL[act]}<br>` +
-        `Avg temp: ${d.temp.toFixed(1)} °C<br>` +
-        `Avg rain: ${d.precip.toFixed(1)} mm` +
-        (d.clt !== null ? `<br>Avg cloud: ${d.clt.toFixed(0)}% (${Math.round(100 - d.clt)}% sunny)` : '')
-      );
-    })
-    .on('mousemove', e => tip.style('left', (e.pageX + 14) + 'px').style('top', (e.pageY - 36) + 'px'))
-    .on('mouseout', () => tip.style('opacity', 0));
-
-  // ── Update ──────────────────────────────────────────────────────────
-  function update() {
-    cards.select('rect.rec-card-bg')
-      .transition().duration(350)
-      .attr('fill', d => ACTIVITY_COLOR[getActivity(d)]);
-
-    cards.select('text.rec-act')
-      .text(d => ACTIVITY_LABEL[getActivity(d)]);
-
-    cards.select('text.rec-temp')
-      .text(d => `${d.temp.toFixed(1)} °C`);
-
-    cards.select('rect.rec-bar')
-      .transition().duration(350)
-      .attr('width', d => Math.max(0, Math.min(cardW - 16, barScale(d.temp))))
-      .attr('fill', d => getActivity(d) === 'beach' ? '#e76f51' : '#4a90a4');
-
-    cards.select('text.rec-precip')
-      .text(d => `${d.precip.toFixed(0)} mm rain`);
-
-    cards.select('text.rec-sun')
-      .style('display', d => d.clt !== null ? null : 'none')
-      .attr('fill', d => d.clt !== null && d.clt < 50 ? '#e07b3a' : '#9bb3c9')
-      .text(d => d.clt !== null ? `~${Math.round(100 - d.clt)}% sunny` : '');
-  }
-
-  update();
-
-  // ── Year input ───────────────────────────────────────────────────────
-  function setYearData(year) {
-    if (year === null) {
-      d3.range(12).forEach(i => {
-        monthAvg[i].temp   = meanTemp[i];
-        monthAvg[i].precip = meanPrecip[i];
-        monthAvg[i].clt    = meanClt[i];
-      });
-      d3.select('#label-year').text('Average');
-    } else {
-      d3.range(12).forEach(i => {
-        const row = rawData.find(d => d.year === year && d.month === i + 1);
-        monthAvg[i].temp   = row ? row.temp_c   : meanTemp[i];
-        monthAvg[i].precip = row ? row.precip_mm : meanPrecip[i];
-        let clt = meanClt[i];
-        if (cloudByYear) {
-          const cr = cloudByYear.find(d => d.year === year && d.month === i + 1);
-          if (cr) clt = cr.clt_pct;
-        }
-        monthAvg[i].clt = clt;
-      });
-      d3.select('#label-year').text(year);
-    }
-    update();
-  }
-
-  const YEAR_MIN = years[0], YEAR_MAX = years[years.length - 1];
-
-  d3.select('#pref-year').on('input', function() {
-    const v = +this.value;
-    if (!this.value || isNaN(v) || v < YEAR_MIN || v > YEAR_MAX) {
-      setYearData(null);
-    } else {
-      setYearData(Math.round(v));
-    }
+  [histCards, recentCards].forEach(group => {
+    group.style('cursor', 'default')
+      .on('mouseover', function(event, d) {
+        const act = getActivity(d);
+        tip.style('opacity', 1).html(
+          `<strong>${MONTHS[d.month - 1]}</strong><br>` +
+          `${ACTIVITY_LABEL[act]}<br>` +
+          `${fmtTemp(d.temp)} · ${d.precip.toFixed(0)} mm rain` +
+          (d.clt !== null ? `<br>${Math.round(100 - d.clt)}% sunny` : '')
+        );
+      })
+      .on('mousemove', e => tip.style('left', (e.clientX + 14) + 'px').style('top', (e.clientY - 36) + 'px'))
+      .on('mouseout', () => tip.style('opacity', 0));
   });
+
+  // ── Update (called whenever prefs change) ───────────────────────────
+  function updateRow(group, cls) {
+    group.select(`rect.${cls}-bg`).transition().duration(350)
+      .attr('fill', d => ACTIVITY_COLOR[getActivity(d)]);
+    group.select(`text.${cls}-act`).text(d => ACTIVITY_LABEL[getActivity(d)]);
+    group.select(`text.${cls}-temp`).text(d => fmtTemp(d.temp));
+    group.select(`text.${cls}-precip`).text(d => `${d.precip.toFixed(0)} mm rain`);
+  }
+
+  function update() {
+    updateRow(histCards,   'hist-card');
+    updateRow(recentCards, 'recent-card');
+  }
+
+  _updateRecChart = update;  // expose for unit toggle
+  update();
 
   // Hide sun slider until cloud data loads
   d3.select('#sun-pref-row').style('display', 'none');
 
   // Preference sliders
-  const warmLabels = ['Prefer cold', 'Prefer cool', 'Moderate', 'Prefer warm', 'Prefer hot'];
-  const dryLabels  = ["Rain ok", 'Drizzle ok', 'Moderate', 'Prefer dry', 'Must be dry'];
-  const sunLabels  = ['Love cloudy', 'Prefer cloudy', 'Moderate', 'Prefer sunny', 'Love sunny'];
+  const dryLabels = ['Rain ok', 'Drizzle ok', 'Moderate', 'Prefer dry', 'Must be dry'];
+  const sunLabels = ['Love cloudy', 'Prefer cloudy', 'Moderate', 'Prefer sunny', 'Love sunny'];
 
-  d3.select('#pref-warm').on('input', function() {
-    prefWarm = +this.value;
-    d3.select('#label-warm').text(warmLabels[Math.round(prefWarm * 4)]);
+  d3.select('#pref-temp').on('input', function() {
+    prefTemp = +this.value;
+    d3.select('#label-pref-temp').text(fmtTemp(prefTemp));
     update();
   });
   d3.select('#pref-dry').on('input', function() {
@@ -1403,41 +809,490 @@ function chartVisitRecommendation(rawData, cloudByYear) {
   });
 }
 
+/* ── Future seasonal curve (mirrors page 2 format) ──────────────── */
+let activeFutureVar = 'temp_c';
+
+function chartFutureSeasonalCurve(containerId, present, future, variable) {
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+
+  const isTempF = variable === 'temp_c' && tempUnit === 'F';
+  const toDisplay = isTempF ? v => (v != null ? v * 9 / 5 + 32 : null) : v => v;
+  const toDisplayDelta = isTempF ? v => (v != null ? v * 9 / 5 : null) : v => v;
+
+  const cfg = {
+    temp_c:    {
+      yLabel: tempUnit === 'F' ? 'Temperature (°F)' : 'Temperature (°C)',
+      posColor: '#c44e52', negColor: '#4a90a4',
+      unit: tempUnit === 'F' ? '°F' : '°C',
+    },
+    precip_mm: { yLabel: 'Precipitation (mm)', posColor: '#4a90a4', negColor: '#c4936a', unit: 'mm' },
+    clt_pct:   { yLabel: 'Cloud cover (%)', posColor: '#9bb3c9', negColor: '#f4a261', unit: '%' },
+  }[variable];
+
+  const presentVals = present.map(d => d[variable]).filter(v => v != null).map(toDisplay);
+  const futureVals  = future .map(d => d[variable]).filter(v => v != null).map(toDisplay);
+  if (!futureVals.length) return;
+
+  const allVals = [...presentVals, ...futureVals];
+  const pad = Math.max((d3.max(allVals) - d3.min(allVals)) * 0.15, 1);
+
+  const W = 900, H = 320;
+  const xLeft = 58, xRight = W - 48;
+  const top = 28, bot = 264;
+
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('role', 'img')
+    .attr('aria-label', `Projected ${cfg.yLabel}: today vs 2091-2100`);
+
+  const x = d3.scalePoint().domain(d3.range(1, 13)).range([xLeft, xRight]).padding(0.3);
+  const y = d3.scaleLinear()
+    .domain([d3.min(allVals) - pad, d3.max(allVals) + pad])
+    .range([bot, top]).nice();
+
+  const curve = d3.curveCatmullRom.alpha(0.5);
+
+  // Grid
+  svg.append('g').attr('class', 'grid').attr('transform', `translate(${xLeft},0)`)
+    .call(d3.axisLeft(y).tickSize(-(xRight - xLeft)).tickFormat('').ticks(5)).lower();
+
+  // Axes
+  svg.append('g').attr('class', 'axis').attr('transform', `translate(${xLeft},0)`)
+    .call(d3.axisLeft(y).ticks(5))
+    .append('text').attr('class', 'axis-label')
+    .attr('transform', 'rotate(-90)').attr('x', -(bot - top) / 2 - top).attr('y', -44)
+    .attr('fill', 'currentColor').attr('text-anchor', 'middle').text(cfg.yLabel);
+
+  svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${bot})`)
+    .call(d3.axisBottom(x).tickFormat(i => MONTHS[i - 1]));
+
+  const pByM    = new Map(present.map(d => [d.month, toDisplay(d[variable])]));
+  const fByM    = new Map(future .map(d => [d.month, toDisplay(d[variable])]));
+  const fStdByM = new Map(future .map(d => [d.month, toDisplayDelta(d[`${variable}_std`])]));
+  const yDomain = y.domain();
+
+  const lineGen = d3.line().x((_, i) => x(i + 1)).y(d => y(d))
+    .defined(d => d != null).curve(curve);
+
+  // ── Std-dev band (year-to-year variability) ───────────────────────
+  const bandData = d3.range(12).map(i => ({
+    mean: fByM.get(i + 1),
+    std:  fStdByM.get(i + 1),
+  }));
+  if (bandData.some(d => d.std != null)) {
+    svg.append('path')
+      .datum(bandData)
+      .attr('fill', cfg.posColor).attr('fill-opacity', 0.13).attr('stroke', 'none')
+      .attr('pointer-events', 'none')
+      .attr('d', d3.area()
+        .x((_, i) => x(i + 1))
+        .y0(d => d.mean != null ? y(Math.max(yDomain[0], d.mean - (d.std || 0))) : 0)
+        .y1(d => d.mean != null ? y(Math.min(yDomain[1], d.mean + (d.std || 0))) : 0)
+        .defined(d => d.mean != null)
+        .curve(curve)
+      );
+  }
+
+  // Present dashed line
+  svg.append('path').datum(d3.range(1, 13).map(m => pByM.get(m)))
+    .attr('fill', 'none').attr('stroke', '#9bb3c9')
+    .attr('stroke-width', 1.5).attr('stroke-dasharray', '5,4')
+    .attr('pointer-events', 'none').attr('d', lineGen);
+
+  const lastP = pByM.get(12);
+  if (lastP != null)
+    svg.append('text').attr('x', xRight + 6).attr('y', y(lastP)).attr('dy', '0.35em')
+      .attr('fill', '#9bb3c9').attr('font-size', 10).text('now');
+
+  // Future bold line
+  svg.append('path').datum(d3.range(1, 13).map(m => fByM.get(m)))
+    .attr('fill', 'none').attr('stroke', cfg.posColor)
+    .attr('stroke-width', 2.5).attr('stroke-linejoin', 'round')
+    .attr('pointer-events', 'none').attr('d', lineGen);
+
+  const lastF = fByM.get(12);
+  if (lastF != null)
+    svg.append('text').attr('x', xRight + 6).attr('y', y(lastF)).attr('dy', '0.35em')
+      .attr('fill', cfg.posColor).attr('font-size', 10).text('2091–2100');
+
+  // Dots on future line — color by direction of change, tooltip shows std dev
+  const tooltip = d3.select('.tooltip');
+  d3.range(12).forEach(i => {
+    const m = i + 1;
+    const pVal = pByM.get(m);
+    const fVal = fByM.get(m);
+    const fStd = fStdByM.get(m);
+    if (fVal == null) return;
+    const isMore = pVal != null && fVal > pVal;
+    const dotColor = variable === 'clt_pct'
+      ? (isMore ? '#9bb3c9' : '#f4a261')
+      : (isMore ? cfg.posColor : cfg.negColor);
+
+    svg.append('circle').attr('cx', x(m)).attr('cy', y(fVal))
+      .attr('r', 5).attr('fill', dotColor)
+      .attr('stroke', '#fff').attr('stroke-width', 1.5).style('cursor', 'pointer')
+      .on('mouseover', function(event) {
+        const delta = pVal != null ? (fVal - pVal) : null;
+        tooltip.style('opacity', 1).html(
+          `<strong>${MONTHS[i]}</strong><br>` +
+          `2091–2100 avg: ${fVal.toFixed(1)} ${cfg.unit}<br>` +
+          (fStd != null ? `Year-to-year spread: ±${fStd.toFixed(1)} ${cfg.unit}<br>` : '') +
+          (delta !== null ? `vs. today: ${delta > 0 ? '+' : ''}${delta.toFixed(1)} ${cfg.unit}` : '')
+        );
+      })
+      .on('mousemove', e => tooltip.style('left', (e.clientX + 14) + 'px').style('top', (e.clientY - 36) + 'px'))
+      .on('mouseout', () => tooltip.style('opacity', 0));
+
+    // Present dot (smaller)
+    if (pVal != null)
+      svg.append('circle').attr('cx', x(m)).attr('cy', y(pVal))
+        .attr('r', 3).attr('fill', '#9bb3c9').attr('pointer-events', 'none');
+  });
+}
+
+/* ── Page 2 chart tab toggle ─────────────────────────────────────── */
+function initChartTabs() {
+  document.querySelectorAll('.chart-tab-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const card = this.closest('.chart-toggled-card');
+      card.querySelectorAll('.chart-tab-btn').forEach(b => b.classList.remove('active'));
+      card.querySelectorAll('.chart-tab-pane').forEach(p => p.classList.remove('active'));
+      this.classList.add('active');
+      card.querySelector(`.chart-tab-pane[data-tab="${this.dataset.tab}"]`).classList.add('active');
+    });
+  });
+}
+
+/* ── Page 3 future variable toggle ───────────────────────────────── */
+const futureVarDescriptions = {
+  ssp126: {
+    temp_c:    'About 1°C of average warming, felt mostly in fall and winter: October climbs 2.2°C and November 1.8°C. Summers shift only slightly, with August peaking around 25.8°C instead of today\'s 24.4°C. The seasonal rhythm of San Diego stays mostly intact, which is kind of the whole point of aggressive climate action.',
+    precip_mm: 'December nearly doubles in rainfall (from 32.8mm to 62.4mm) while August loses almost all of its rain, dropping to just 1.8mm from today\'s 25.7mm. Total annual amounts stay similar but get compressed into fewer, wetter winter months. Year-to-year variability is still wide, so even this optimistic scenario sees unpredictable winters.',
+    clt_pct:   'Cloud patterns shuffle but stay fairly close to today overall. August clears up by about 11 percentage points while June and September get cloudier. San Diego\'s marine layer holds on reasonably well here. Of the four futures, this one keeps the cloud cover pattern most similar to what we have now.',
+  },
+  ssp245: {
+    temp_c:    'About 1.8°C of average warming, with fall getting hit hardest: October climbs 3.3°C and November 2.9°C. August reaches 26.3°C and September 25.7°C, stretching summer well into fall. June also warms 2°C, so the whole calendar shifts and San Diego starts feeling like it\'s running about a season ahead of schedule.',
+    precip_mm: 'February nearly doubles from 61mm to 95.8mm, while January drops sharply from 64mm to just 34mm. Total annual rainfall ends up slightly below today, concentrated into fewer, more intense events. August also loses almost all its rain. Wet events get wetter and dry spells get longer, which drives both flash flood and drought risk up at the same time.',
+    clt_pct:   'Cloud cover drops noticeably across most of the year, especially in winter. January loses over 10 percentage points and December loses about 8. Less cloud means more direct sunlight reaching the surface, which amplifies warming beyond what the temperature numbers alone suggest. Clearer skies sound appealing until you think about what they mean for heat.',
+  },
+  ssp370: {
+    temp_c:    'About 2.65°C of average warming, with October jumping 4.6°C and November 3.7°C. August averages exactly 27°C, which is the fire risk threshold in this model. June warms nearly 3°C, shrinking the comfortable spring shoulder season to almost nothing. At this level, the compounding effects on wildfire, water supply, and outdoor livability start becoming hard to ignore.',
+    precip_mm: 'February goes from 61mm to nearly 104mm, almost doubling, while August loses essentially all of its rain. December also gets wetter by about 24mm. The year-to-year spread is very wide throughout winter, meaning individual years could look wildly different from the average line. Boom-or-bust winters become the norm rather than the exception.',
+    clt_pct:   'Cloud cover redistributes dramatically: July gains 12 percentage points and September gains 14, while January loses 11. Basically summer gets cloudier and winter gets clearer. The marine layer shifts its timing rather than disappearing altogether. Cloudier summers sound like cooling relief but they happen alongside much higher temperatures, so the surface still ends up hotter overall.',
+  },
+  ssp585: {
+    temp_c:    'The biggest warming scenario at about 3.2°C on average, but fall and summer feel it most: October and November each jump 4.5°C, and August rises nearly 4°C to 28.3°C. Even January warms by 3.9°C. May reaches 20°C so beach-weather conditions arrive in spring. Basically every month would feel noticeably different to someone who grew up with San Diego\'s current climate.',
+    precip_mm: 'January becomes extremely wet at 108mm, nearly double today\'s 64mm, while December dries out to just 10.8mm, basically a swap of two consecutive months. September also spikes with an extra 12mm out of nowhere. The shaded band is widest here across almost every month, meaning year-to-year unpredictability is at its highest and planning around rainfall becomes genuinely difficult.',
+    clt_pct:   'Summer cloud cover jumps dramatically: July nearly doubles from 22% to 39%, September gains 14 percentage points, and June adds 13.5. Meanwhile March clears out significantly, losing 15.6 points. The cloudier summers might seem counterintuitive for the hottest scenario, but trapped heat still dominates. The seasonal pattern of San Diego\'s sky shifts so much it would feel almost unrecognizable.',
+  },
+};
+
+function setFutureChartDesc(variable) {
+  const el = document.getElementById('future-chart-desc');
+  if (el) el.textContent = (futureVarDescriptions[activeScenario] || {})[variable] || '';
+}
+
+function initFutureChartTabs(sspData) {
+  setFutureChartDesc('temp_c');
+  document.querySelectorAll('.future-tab-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.future-tab-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      activeFutureVar = this.dataset.var;
+      setFutureChartDesc(activeFutureVar);
+      if (sspData) {
+        const present = sspData.filter(d => d.scenario.startsWith('present'));
+        const future  = sspData.filter(d => d.scenario.startsWith(activeScenario));
+        chartFutureSeasonalCurve('chart-future-seasonal', present, future, activeFutureVar);
+      }
+    });
+  });
+}
+
+/* ── °C / °F toggle ─────────────────────────────────────────────── */
+function initUnitToggle(sspData) {
+  const btn = document.getElementById('unit-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    tempUnit = tempUnit === 'C' ? 'F' : 'C';
+    btn.textContent = tempUnit === 'F' ? 'Switch to °C' : 'Switch to °F';
+    btn.classList.toggle('active', tempUnit === 'F');
+
+    // Update slider label
+    const sl = document.getElementById('pref-temp');
+    if (sl) d3.select('#label-pref-temp').text(fmtTemp(+sl.value));
+
+    // Update pref-ends range labels
+    const loEl = document.getElementById('pref-temp-lo');
+    const hiEl = document.getElementById('pref-temp-hi');
+    if (loEl) loEl.textContent = tempUnit === 'F' ? '64°F: Love cool days' : '18°C: Love cool days';
+    if (hiEl) hiEl.textContent = tempUnit === 'F' ? '86°F: Love the heat'  : '30°C: Love the heat';
+
+    // Update temp seasonal axis
+    if (_updateTempSeasonalUnit) _updateTempSeasonalUnit();
+
+    // Re-render rec cards
+    if (_updateRecChart) _updateRecChart();
+
+    // Re-render future cards
+    if (sspData) updateFutureCharts(sspData);
+  });
+}
+
+/* ── Weather illustration (page 1) ──────────────────────────────── */
+function initWeatherIllustration() {
+  const prefTempEl = document.getElementById('pref-temp');
+  const prefDryEl  = document.getElementById('pref-dry');
+  const prefSunEl  = document.getElementById('pref-sun');
+  if (!prefTempEl) return;
+
+  function update() {
+    const pTemp = +prefTempEl.value;
+    const pDry  = +prefDryEl.value;
+    const pSun  = +prefSunEl.value;
+
+    // Heat overlay: 0 at 18°C → 0.30 at 30°C
+    const heatOpacity = ((pTemp - 18) / 12) * 0.30;
+    const heatEl = document.getElementById('heat-overlay');
+    if (heatEl) heatEl.setAttribute('opacity', heatOpacity.toFixed(3));
+
+    // Sky color: cooler blue at 18°C, warmer/hazier at 30°C
+    const skyEl = document.getElementById('sky-rect');
+    if (skyEl) {
+      const r = Math.round(185 + (pTemp - 18) / 12 * 60);
+      const g = Math.round(225 - (pTemp - 18) / 12 * 20);
+      const b = Math.round(255 - (pTemp - 18) / 12 * 100);
+      skyEl.setAttribute('fill', `rgb(${r},${g},${b})`);
+    }
+
+    // Raindrops: visible when rain tolerance is low (rain ok = left side of slider)
+    const rainOpacity = Math.max(0, 1 - pDry * 2.5);
+    const rainEl = document.getElementById('illus-rain');
+    if (rainEl) rainEl.setAttribute('opacity', rainOpacity.toFixed(2));
+
+    // Sun vs clouds: sun appears above 0.5, clouds below 0.5
+    const sunOpacity   = pSun >= 0.5 ? (pSun - 0.5) * 2 : 0;
+    const cloudOpacity = pSun <= 0.5 ? 1 - pSun * 2   : 0;
+    const sunEl    = document.getElementById('illus-sun');
+    const cloudsEl = document.getElementById('illus-clouds');
+    if (sunEl)    sunEl.setAttribute('opacity', sunOpacity.toFixed(2));
+    if (cloudsEl) cloudsEl.setAttribute('opacity', cloudOpacity.toFixed(2));
+  }
+
+  prefTempEl.addEventListener('input', update);
+  prefDryEl .addEventListener('input', update);
+  prefSunEl .addEventListener('input', update);
+  update();
+
+  const personEl = document.getElementById('illus-person');
+  if (personEl) {
+    personEl.addEventListener('click', () => {
+      if (personEl.classList.contains('flipping')) return;
+      personEl.classList.add('flipping');
+      personEl.addEventListener('animationend', () => personEl.classList.remove('flipping'), { once: true });
+    });
+  }
+}
+
+/* ── Page navigation ─────────────────────────────────────────────── */
+function initPageNav() {
+  let current = 1;
+
+  function goTo(n) {
+    document.querySelectorAll('.page').forEach((p, i) => {
+      p.classList.toggle('active', i + 1 === n);
+    });
+    document.querySelectorAll('.step[data-page]').forEach(s => {
+      const pg = +s.dataset.page;
+      s.classList.toggle('active',    pg === n);
+      s.classList.toggle('completed', pg < n);
+    });
+    current = n;
+    document.querySelector('.page-container').scrollTop = 0;
+  }
+
+  document.getElementById('btn-next-1').addEventListener('click', () => goTo(2));
+  document.getElementById('btn-back-2').addEventListener('click', () => goTo(1));
+  document.getElementById('btn-next-2').addEventListener('click', () => goTo(3));
+  document.getElementById('btn-back-3').addEventListener('click', () => goTo(2));
+
+  // Step numbers are always clickable — free navigation
+  document.querySelectorAll('.step[data-page]').forEach(s => {
+    s.addEventListener('click', () => goTo(+s.dataset.page));
+  });
+}
+
+/* ── Scenario selector (page 3) ─────────────────────────────────── */
+let activeScenario = 'ssp585';
+
+function initScenarioSelector(sspData) {
+  document.querySelectorAll('.scenario-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      activeScenario = this.dataset.ssp;
+      if (sspData) updateFutureCharts(sspData);
+    });
+  });
+}
+
+/* ── Future charts (called once SSP data is available) ──────────── */
+function updateFutureCharts(sspData) {
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const ACTIVITY_COLOR = {
+    beach: '#f4a261', hike: '#52b788', home: '#aac4d4',
+    fire:  '#e63946', storm: '#457b9d',
+  };
+  const ACTIVITY_LABEL = {
+    beach: 'Beach', hike: 'Hiking', home: 'Indoors',
+    fire: 'Fire Risk', storm: 'Storm Risk',
+  };
+
+  const present = sspData.filter(d => d.scenario.startsWith('present'));
+  const future  = sspData.filter(d => d.scenario.startsWith(activeScenario));
+
+  const labelMap = {
+    ssp126: 'SSP 1-2.6 Clean Future',
+    ssp245: 'SSP 2-4.5 Middle Road',
+    ssp370: 'SSP 3-7.0 High Emissions',
+    ssp585: 'SSP 5-8.5 Fossil Future',
+  };
+  d3.select('#future-scenario-label').text(`${labelMap[activeScenario]} — 2091–2100`);
+
+  // ── Activity recommendation cards ─────────────────────────────────
+  const recEl = document.getElementById('chart-future-rec');
+  recEl.classList.remove('future-placeholder');
+  recEl.innerHTML = '';
+
+  const FIRE_THRESHOLD = 27;
+  const _prefTemp = +document.getElementById('pref-temp').value;
+  const prefDry   = +document.getElementById('pref-dry').value;
+  const prefSun   = +document.getElementById('pref-sun').value;
+
+  const presentPrecipByMonth = new Map(present.map(d => [d.month, d.precip_mm]));
+
+  function getActivity(row) {
+    const { temp_c: temp, precip_mm: precip, clt_pct: clt } = row;
+    const presentMean = presentPrecipByMonth.get(row.month) ?? 0;
+    const idealLo  = _prefTemp - 8;
+    const comfortHi = _prefTemp + 2;
+
+    if (precip > presentMean * 2.5) return 'storm';
+    if (temp > FIRE_THRESHOLD && precip < 5) return 'fire';
+
+    const tempScore = temp < idealLo
+      ? Math.max(0, 1 - (idealLo - temp) / 8)
+      : temp > comfortHi
+      ? Math.max(0, 1 - (temp - comfortHi) / 4)
+      : 1.0;
+    const wetPenalty = Math.max(0, 1 - Math.exp(-precip / 25)) * prefDry;
+    const sunPenalty = clt != null ? Math.max(0, 1 - Math.exp(-clt / 40)) * prefSun : 0;
+    const score = tempScore * (1 - wetPenalty * 0.8) * (1 - sunPenalty * 0.7);
+    if (score < 0.25) return 'home';
+    if (temp >= 20) return 'beach';
+    return 'hike';
+  }
+
+  // Layout constants — row labels sit above each card row
+  const W = 900;
+  const cardW = 68, cardH = 100, gap = 4;
+  const totalW = 12 * cardW + 11 * gap;   // 860
+  const startX = (W - totalW) / 2;        // 20 — enough room for cards, labels go above
+  const row1LabelY = 16;
+  const row1CardsY = 34;
+  const row2LabelY = row1CardsY + cardH + 22;  // 156
+  const row2CardsY = row2LabelY + 18;           // 174
+  const svgH      = row2CardsY + cardH + 16;    // 290
+
+  const recSvg = d3.select(recEl)
+    .append('svg')
+    .attr('viewBox', `0 0 ${W} ${svgH}`)
+    .attr('role', 'img')
+    .attr('aria-label', 'Monthly activity comparison: present vs. future');
+
+  // Row labels above each row
+  recSvg.append('text').attr('x', startX).attr('y', row1LabelY + 11)
+    .attr('font-size', 11).attr('font-weight', '600').attr('fill', '#5c6b7a')
+    .text('Today (2005–2014)');
+  recSvg.append('text').attr('x', startX).attr('y', row2LabelY + 11)
+    .attr('font-size', 11).attr('font-weight', '600').attr('fill', '#0b6e99')
+    .text(`${labelMap[activeScenario]} — 2091–2100`);
+
+  [
+    { data: present, cardsY: row1CardsY },
+    { data: future,  cardsY: row2CardsY },
+  ].forEach(({ data, cardsY }) => {
+    const cards = recSvg.selectAll(null)
+      .data(data).join('g')
+      .attr('transform', (_, i) => `translate(${startX + i * (cardW + gap)},${cardsY})`);
+
+    cards.append('rect')
+      .attr('width', cardW).attr('height', cardH).attr('rx', 5)
+      .attr('fill', d => ACTIVITY_COLOR[getActivity(d)]);
+
+    cards.append('text')
+      .attr('x', cardW / 2).attr('y', 14).attr('text-anchor', 'middle')
+      .attr('font-size', 10).attr('font-weight', '700').attr('fill', '#1a2332')
+      .text(d => MONTHS[d.month - 1]);
+
+    cards.append('text')
+      .attr('x', cardW / 2).attr('y', 32).attr('text-anchor', 'middle')
+      .attr('font-size', 9).attr('font-weight', '600').attr('fill', '#1a2332')
+      .text(d => ACTIVITY_LABEL[getActivity(d)]);
+
+    cards.append('text')
+      .attr('x', cardW / 2).attr('y', 48).attr('text-anchor', 'middle')
+      .attr('font-size', 8).attr('fill', '#3d4f5e')
+      .text(d => fmtTemp(d.temp_c));
+
+    cards.append('rect')
+      .attr('x', 8).attr('y', 55).attr('width', cardW - 16).attr('height', 3)
+      .attr('rx', 1.5).attr('fill', 'rgba(26,35,50,0.15)');
+
+    cards.append('text')
+      .attr('x', cardW / 2).attr('y', 74).attr('text-anchor', 'middle')
+      .attr('font-size', 8).attr('fill', '#5c6b7a')
+      .text(d => `${d.precip_mm.toFixed(0)} mm rain`);
+  });
+
+  // ── Future seasonal chart (same format as page 2) ─────────────────
+  chartFutureSeasonalCurve('chart-future-seasonal', present, future, activeFutureVar);
+  setFutureChartDesc(activeFutureVar);
+}
+
 async function init() {
-  const [annual, anomalies, seaLevel, popAnnual, popCensus, meta, monthlyClimatology, cloudData] = await Promise.all([
-    d3.csv("data/annual_climate.csv", d3.autoType),
-    d3.csv("data/annual_anomalies.csv", d3.autoType),
-    d3.csv("data/annual_sea_level.csv", d3.autoType),
-    d3.csv("data/annual_population_density.csv", d3.autoType),
-    d3.csv("data/census_population.csv", d3.autoType),
+  const [meta, monthlyClimatology, cloudData, sspData] = await Promise.all([
     d3.json("data/metadata.json"),
     d3.csv("data/monthly_by_year.csv", d3.autoType),
     d3.csv("data/monthly_cloud.csv", d3.autoType).catch(() => null),
+    d3.csv("data/ssp_monthly_climatology.csv", d3.autoType).catch(() => null),
   ]);
 
   if (meta) {
-    const zosGrid =
-      meta.zos_grid_lat != null
-        ? ` · Ocean (zos): ${meta.zos_grid_lat.toFixed(2)}°N, ${meta.zos_grid_lon.toFixed(2)}°`
-        : "";
-    d3.select("#meta-grid").text(
-      `CMIP6 atmosphere grid: ${meta.grid_lat.toFixed(2)}°N, ${meta.grid_lon.toFixed(2)}°${zosGrid} · ${meta.period}`
-    );
     d3.select("#meta-source").text(meta.source);
   }
 
   chartSeasonalCurve(monthlyClimatology);
   if (cloudData) chartCloudCurve(cloudData);
   chartVisitRecommendation(monthlyClimatology, cloudData);
-  chartAnnualTemperature(annual);
-  chartTemperatureAnomaly(anomalies);
-  chartSeaLevel(seaLevel);
-  chartPrecipitation(anomalies);
-  chartPopulationDensity(popAnnual, popCensus);
+
+  initPageNav();
+  initChartTabs();
+  initWeatherIllustration();
+  initUnitToggle(sspData);
+  initScenarioSelector(sspData);
+  initFutureChartTabs(sspData);
+
+  if (sspData) updateFutureCharts(sspData);
 }
 
 init().catch((err) => {
   console.error(err);
-  document.querySelector("main").innerHTML =
-    `<p style="color:#c44e52">Failed to load data. Run <code>python scripts/extract_cmip6.py</code> first.</p>`;
+  document.getElementById('page-1').querySelector('.page-inner').insertAdjacentHTML(
+    'afterbegin',
+    `<p style="color:#c44e52;padding:1rem">Failed to load data. Run <code>python scripts/extract_cmip6.py</code> first.</p>`
+  );
 });

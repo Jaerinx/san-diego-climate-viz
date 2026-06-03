@@ -19,6 +19,10 @@ body {
   color: var(--ink);
   background: var(--bg);
   line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
 header {
@@ -97,7 +101,7 @@ svg {
 }
 
 .tooltip {
-  position: absolute;
+  position: fixed;
   pointer-events: none;
   background: rgba(26, 35, 50, 0.92);
   color: #fff;
@@ -350,13 +354,12 @@ svg {
   font-size: 0.75rem;
 }
 
-/* ── Tooltip ───────────────────────────────────────────────────────── */
 footer {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 1.5rem 2rem;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  padding: 1rem 0 0.5rem;
+  border-top: 1px solid var(--grid);
+  margin-top: 1rem;
 }
 
 .section-divider {
@@ -428,4 +431,523 @@ footer {
   stroke: rgba(255, 255, 255, 0.9);
   stroke-width: 3px;
   stroke-linejoin: round;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PAGE SYSTEM
+═══════════════════════════════════════════════════════════════════ */
+
+.page-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg);
+}
+
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+  animation: pageIn 0.25s ease;
+}
+
+@keyframes pageIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.page-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 2rem 3rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+/* ── Step nav ─────────────────────────────────────────────────────── */
+
+.step-nav {
+  background: var(--card);
+  border-bottom: 1px solid var(--grid);
+  padding: 0.7rem 2rem;
+  flex-shrink: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.step-list {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.unit-toggle {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--grid);
+  border-radius: 6px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.unit-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.unit-toggle.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.step-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--grid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--card);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.step.active .step-dot {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.step.completed .step-dot {
+  border-color: var(--cool);
+  background: var(--cool);
+  color: #fff;
+}
+
+.step-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.step.active .step-label    { color: var(--accent); }
+.step.completed .step-label { color: var(--cool); }
+
+.step-connector {
+  flex: 1;
+  height: 2px;
+  background: var(--grid);
+  margin: 0 0.75rem;
+  min-width: 32px;
+  transition: background 0.2s;
+}
+
+/* ── Page CTA / nav buttons ───────────────────────────────────────── */
+
+.page-cta-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.page-nav-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-cta {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.7rem 1.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.page-cta:hover {
+  background: #0a5e85;
+  transform: translateY(-1px);
+}
+
+.page-back {
+  background: none;
+  color: var(--muted);
+  border: 1px solid var(--grid);
+  border-radius: 8px;
+  padding: 0.65rem 1.1rem;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.page-back:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   PAGE 1 — Welcome hero
+───────────────────────────────────────────────────────────────── */
+
+.welcome-hero {
+  padding: 2.5rem 0 0.75rem;
+}
+
+.welcome-hero h1 {
+  margin: 0 0 0.5rem;
+  font-size: 2.6rem;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.welcome-tagline {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.65;
+  margin: 0 0 0.6rem;
+}
+
+.meta-grid-text {
+  color: var(--muted);
+  font-size: 0.76rem;
+  margin: 0;
+}
+
+.pref-setup-card {
+  padding-bottom: 1rem;
+}
+
+.pref-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.pref-card-header h2 {
+  margin: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   PAGE 3 — Future scenarios
+───────────────────────────────────────────────────────────────── */
+
+.future-hero {
+  padding: 2rem 0 0.25rem;
+}
+
+.future-title {
+  font-size: 1.7rem;
+  margin: 0 0 0.5rem;
+  color: var(--ink);
+}
+
+.future-tagline {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.65;
+  max-width: 70ch;
+  margin: 0;
+}
+
+/* ── Scenario selector ────────────────────────────────────────────── */
+
+.scenario-selector {
+  padding-bottom: 1rem;
+}
+
+.scenario-btns {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  padding: 0.75rem 0 0.25rem;
+}
+
+.scenario-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  padding: 0.85rem;
+  border: 2px solid var(--grid);
+  border-radius: 10px;
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
+}
+
+.scenario-btn:hover {
+  border-color: var(--accent);
+  background: #eef5fa;
+}
+
+.scenario-btn.active {
+  border-color: var(--accent);
+  background: #e4f1f9;
+}
+
+.ssp-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.ssp-badge.ssp126 { background: #d4edda; color: #155724; }
+.ssp-badge.ssp245 { background: #fff3cd; color: #856404; }
+.ssp-badge.ssp370 { background: #ffe0cc; color: #7a3a00; }
+.ssp-badge.ssp585 { background: #f8d7da; color: #721c24; }
+
+.ssp-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ssp-desc {
+  font-size: 0.73rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+/* ── Generation timeline ──────────────────────────────────────────── */
+
+.generation-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.4rem 2rem;
+  background: var(--card);
+  border: 1px solid var(--grid);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(26, 35, 50, 0.05);
+}
+
+.gen-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  opacity: 0.35;
+  transition: opacity 0.2s;
+  min-width: 100px;
+  text-align: center;
+}
+
+.gen-item.gen-you,
+.gen-item.gen-end {
+  opacity: 1;
+}
+
+.gen-year {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.gen-label {
+  font-size: 0.74rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.gen-item.gen-end .gen-year { color: var(--accent); }
+.gen-item.gen-end .gen-label { color: var(--accent); font-weight: 600; }
+
+.gen-arrow {
+  color: var(--grid);
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  margin: 0 0.2rem;
+}
+
+/* ── Narrative card ───────────────────────────────────────────────── */
+
+.climate-narrative h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1.1rem;
+}
+
+.climate-narrative p {
+  margin: 0 0 0.6rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.climate-narrative strong {
+  color: var(--ink);
+}
+
+/* ── Chart tab toggle ─────────────────────────────────────────────── */
+
+.chart-toggled-card {
+  padding-top: 0;
+}
+
+.chart-tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--grid);
+  margin-bottom: 0;
+}
+
+.chart-tab-btn,
+.future-tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 0.7rem 1.2rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+
+.chart-tab-btn:hover,
+.future-tab-btn:hover {
+  color: var(--ink);
+}
+
+.chart-tab-btn.active,
+.future-tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.chart-tab-pane {
+  display: none;
+  padding: 0.75rem 1rem 0.5rem;
+}
+
+.chart-tab-pane.active {
+  display: block;
+}
+
+/* ── Future chart placeholders ────────────────────────────────────── */
+
+.future-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  border: 2px dashed var(--grid);
+  border-radius: 8px;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.placeholder-msg {
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+  line-height: 1.7;
+}
+
+.placeholder-msg code {
+  background: var(--bg);
+  border: 1px solid var(--grid);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+  font-size: 0.85em;
+  color: var(--ink);
+}
+
+/* ── Welcome tagline list ─────────────────────────────────────────── */
+ul.welcome-tagline {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+ul.welcome-tagline li {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.5;
+  padding-left: 1.4rem;
+  position: relative;
+}
+
+ul.welcome-tagline li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-size: 0.85rem;
+  top: 0.05em;
+}
+
+/* ── Weather illustration ─────────────────────────────────────────── */
+.weather-illustration {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0 0.5rem;
+}
+
+.weather-illustration svg {
+  border-radius: 10px;
+  max-width: 420px;
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: hidden;
+}
+
+@keyframes stickman-flip {
+  0%   { transform: translateY(0px)   rotate(0deg);   }
+  15%  { transform: translateY(-28px) rotate(54deg);  }
+  35%  { transform: translateY(-54px) rotate(126deg); }
+  50%  { transform: translateY(-62px) rotate(180deg); }
+  65%  { transform: translateY(-54px) rotate(234deg); }
+  82%  { transform: translateY(-28px) rotate(295deg); }
+  93%  { transform: translateY(-6px)  rotate(345deg); }
+  100% { transform: translateY(0px)   rotate(360deg); }
+}
+
+#illus-person {
+  transform-box: fill-box;
+  transform-origin: center;
+  cursor: pointer;
+}
+
+#illus-person.flipping {
+  animation: stickman-flip 0.7s linear;
+}
+
+/* ── Page 3 chart description ─────────────────────────────────────── */
+.future-chart-desc {
+  margin: 0.6rem 0 0.25rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--bg);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.65;
 }

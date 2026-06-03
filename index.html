@@ -3,240 +3,432 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>San Diego Seasonal Climate, 1925–2014</title>
+    <title>San Diego Climate, 1925–now–2100</title>
     <link rel="stylesheet" href="css/style.css" />
     <script src="https://d3js.org/d3.v7.min.js"></script>
   </head>
   <body>
-    <header>
-      <h1>San Diego Seasonal Climate, 1925–2014</h1>
-      <p>
-        Explore 90 years of San Diego's climate using NOAA CMIP6 model data.
-      </p>
-      <p id="meta-grid"></p>
-    </header>
 
     <div class="tooltip"></div>
 
-    <main>
-      <!-- ── HERO 1: Temperature ───────────────────────────────────── -->
-      <section class="chart-card hero-card">
-        <h2>San Diego's Monthly Temperature, 1925–2014</h2>
-        <p class="subtitle">
-          Each year's monthly temperature profile (bold) compared to all 90 years (gray) and the long-run average (dashed).
-          <span style="color:#c44e52;font-weight:600">Red dots</span> are warmer than average,
-          <span style="color:#4a90a4;font-weight:600">blue</span> are cooler.
-          Click any dot to see that month's 90-year trend.
-        </p>
-        <div class="chart" id="chart-temp-seasonal"></div>
-        <div class="panel-ctrl slider-below-chart">
-          <div class="ctrl-header">
-            <button id="play-btn-t" class="play-btn">&#9654; Play</button>
-            <span class="year-badge" id="year-label-t">1925</span>
-            <div class="speed-group">
-              <span class="speed-label">Speed:</span>
-              <button class="speed-btn-t speed-btn" data-ms="1000">0.5×</button>
-              <button class="speed-btn-t speed-btn active" data-ms="500">1×</button>
-              <button class="speed-btn-t speed-btn" data-ms="250">2×</button>
-              <button class="speed-btn-t speed-btn" data-ms="100">5×</button>
-            </div>
-          </div>
-          <div class="slider-align">
-            <input type="range" id="year-slider-t" class="year-slider" min="1925" max="2014" step="any" value="1925">
-            <div class="year-ticks">
-              <span>1925</span><span>1940</span><span>1955</span><span>1970</span><span>1985</span><span>2000</span><span>2014</span>
-            </div>
-          </div>
+    <!-- ── Step nav ──────────────────────────────────────────────────── -->
+    <nav class="step-nav">
+      <div class="step-list">
+        <div class="step active" data-page="1">
+          <span class="step-dot">1</span>
+          <span class="step-label">Your Preferences</span>
         </div>
-        <div id="month-trend-panel" class="month-trend-panel hidden">
-          <div class="month-trend-header">
-            <h3 id="month-trend-title"></h3>
-            <button class="month-trend-close" id="month-trend-close" aria-label="Close">✕</button>
-          </div>
-          <div id="month-trend-chart"></div>
+        <div class="step-connector"></div>
+        <div class="step" data-page="2">
+          <span class="step-dot">2</span>
+          <span class="step-label">Today's Climate</span>
         </div>
-      </section>
-
-      <!-- ── HERO 2: Precipitation ──────────────────────────────────── -->
-      <section class="chart-card hero-card">
-        <h2>San Diego's Monthly Precipitation, 1925–2014</h2>
-        <p class="subtitle">
-          Each year's monthly rainfall (bold blue) compared to all 90 years (gray) and the long-run average (dashed).
-          <span style="color:#4a90a4;font-weight:600">Blue dots</span> are wetter than average,
-          <span style="color:#c4936a;font-weight:600">orange</span> are drier.
-        </p>
-        <div class="chart" id="chart-precip-seasonal"></div>
-        <div class="panel-ctrl slider-below-chart">
-          <div class="ctrl-header">
-            <button id="play-btn-p" class="play-btn">&#9654; Play</button>
-            <span class="year-badge" id="year-label-p">1925</span>
-            <div class="speed-group">
-              <span class="speed-label">Speed:</span>
-              <button class="speed-btn-p speed-btn" data-ms="1000">0.5×</button>
-              <button class="speed-btn-p speed-btn active" data-ms="500">1×</button>
-              <button class="speed-btn-p speed-btn" data-ms="250">2×</button>
-              <button class="speed-btn-p speed-btn" data-ms="100">5×</button>
-            </div>
-          </div>
-          <div class="slider-align">
-            <input type="range" id="year-slider-p" class="year-slider" min="1925" max="2014" step="any" value="1925">
-            <div class="year-ticks">
-              <span>1925</span><span>1940</span><span>1955</span><span>1970</span><span>1985</span><span>2000</span><span>2014</span>
-            </div>
-          </div>
+        <div class="step-connector"></div>
+        <div class="step" data-page="3">
+          <span class="step-dot">3</span>
+          <span class="step-label">Future Scenarios</span>
         </div>
-      </section>
-
-      <!-- ── HERO 3: Cloud cover ───────────────────────────────────── -->
-      <section class="chart-card hero-card">
-        <h2>San Diego's Monthly Cloud Cover, 1925–2014</h2>
-        <p class="subtitle">
-          Each year's monthly cloud cover (bold) compared to all 90 years (gray) and the long-run average (dashed).
-          <span style="color:#f4a261;font-weight:600">Amber dots</span> are sunnier than average,
-          <span style="color:#9bb3c9;font-weight:600">blue</span> are cloudier.
-          <span id="cloud-chart-note" style="color:var(--muted);font-style:italic">Run <code>python scripts/extract_cloud.py</code> to load this chart.</span>
-        </p>
-        <div class="chart" id="chart-cloud-seasonal"></div>
-        <div class="panel-ctrl slider-below-chart">
-          <div class="ctrl-header">
-            <button id="play-btn-c" class="play-btn">&#9654; Play</button>
-            <span class="year-badge" id="year-label-c">1925</span>
-            <div class="speed-group">
-              <span class="speed-label">Speed:</span>
-              <button class="speed-btn-c speed-btn" data-ms="1000">0.5×</button>
-              <button class="speed-btn-c speed-btn active" data-ms="500">1×</button>
-              <button class="speed-btn-c speed-btn" data-ms="250">2×</button>
-              <button class="speed-btn-c speed-btn" data-ms="100">5×</button>
-            </div>
-          </div>
-          <div class="slider-align">
-            <input type="range" id="year-slider-c" class="year-slider" min="1925" max="2014" step="any" value="1925">
-            <div class="year-ticks">
-              <span>1925</span><span>1940</span><span>1955</span><span>1970</span><span>1985</span><span>2000</span><span>2014</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── RECOMMENDATION CHART ──────────────────────────────────── -->
-      <section class="chart-card">
-        <h2>San Diego Seasonal Guide: Monthly Activity Recommendation</h2>
-        <p class="subtitle">
-          Adjust preferences below and the recommendations update live.
-          <span id="cloud-note" style="color:var(--muted);font-style:italic"></span>
-        </p>
-        <div class="year-picker-bar">
-          <label class="year-picker-label">Year</label>
-          <span class="pref-val" id="label-year">Average</span>
-          <input type="number" id="pref-year" class="year-input" min="1925" max="2014" placeholder="1925–2014">
-          <span class="year-picker-hint">leave blank for 90-year average</span>
-        </div>
-        <div id="chart-visit-rec"></div>
-        <div class="rec-prefs">
-          <div class="pref-row">
-            <label class="pref-label">Temperature preference</label>
-            <span class="pref-val" id="label-warm">Moderate</span>
-            <input type="range" id="pref-warm" min="0" max="1" step="0.25" value="0.5" list="warm-ticks">
-            <datalist id="warm-ticks">
-              <option value="0"></option><option value="0.25"></option>
-              <option value="0.5"></option><option value="0.75"></option>
-              <option value="1"></option>
-            </datalist>
-            <div class="pref-ends"><span>Prefer cold</span><span>Prefer hot</span></div>
-          </div>
-          <div class="pref-row">
-            <label class="pref-label">Rain tolerance</label>
-            <span class="pref-val" id="label-dry">Moderate</span>
-            <input type="range" id="pref-dry" min="0" max="1" step="0.25" value="0.5" list="dry-ticks">
-            <datalist id="dry-ticks">
-              <option value="0"></option><option value="0.25"></option>
-              <option value="0.5"></option><option value="0.75"></option>
-              <option value="1"></option>
-            </datalist>
-            <div class="pref-ends"><span>Rain ok</span><span>Must be dry</span></div>
-          </div>
-          <div class="pref-row" id="sun-pref-row">
-            <label class="pref-label">Sunniness</label>
-            <span class="pref-val" id="label-sun">Moderate</span>
-            <input type="range" id="pref-sun" min="0" max="1" step="0.25" value="0.5" list="sun-ticks">
-            <datalist id="sun-ticks">
-              <option value="0"></option><option value="0.25"></option>
-              <option value="0.5"></option><option value="0.75"></option>
-              <option value="1"></option>
-            </datalist>
-            <div class="pref-ends"><span>Love cloudy</span><span>Love sunny</span></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── PROTOTYPE SECTION ────────────────────────────────────────── -->
-      <div class="section-divider">
-        <h2 class="section-divider-title">Prototype</h2>
       </div>
+    </nav>
 
-      <section class="chart-card">
-        <h2>1. Warming trend in annual mean temperature</h2>
-        <p class="subtitle">
-          Annual temperatures (thin line) with a 5-year moving average (bold) showing a gradual warming trend over nine decades.
-        </p>
-        <div class="chart" id="chart-annual-temp"></div>
-      </section>
+    <div class="page-container">
 
-      <section class="chart-card">
-        <h2>2. Temperature anomalies from a 1961–1990 baseline</h2>
-        <p class="subtitle">
-          Each bar shows how much the annual mean departed from the 1961–1990 baseline, a standard reference period for tracking warming.
-        </p>
-        <div class="chart" id="chart-anomaly"></div>
-      </section>
+    <!-- ════════════════════════════════════════════════════════════════
+         PAGE 1 — Preferences
+    ═════════════════════════════════════════════════════════════════ -->
+    <div class="page active" id="page-1">
+      <div class="page-inner">
 
-      <section class="chart-card">
-        <h2>3. Modeled sea level near the San Diego coast</h2>
-        <p class="subtitle">
-          Modeled sea surface height at the nearest ocean grid point, relative to the 1961–1990 average in millimeters.
-        </p>
-        <div class="chart" id="chart-sea-level"></div>
-      </section>
+        <div class="welcome-hero">
+          <h1>San Diego Climate, 1925–now–2100</h1>
+          <ul class="welcome-tagline">
+            <li>The climate has been stable for generations.</li>
+            <li>What we hand to the next one depends on choices being made right now.</li>
+            <li>Explore the history and four possible futures.</li>
+          </ul>
+        </div>
 
-      <section class="chart-card">
-        <h2>4. Year-to-year precipitation totals</h2>
-        <p class="subtitle">
-          Annual rainfall totals with a classic wet-winter, dry-summer pattern. Dashed line marks the 1961–1990 average.
-        </p>
-        <div class="chart" id="chart-precip"></div>
-      </section>
+        <div class="chart-card pref-setup-card">
+          <div class="pref-card-header">
+            <h2>What kind of weather do you enjoy?</h2>
+            <button class="unit-toggle" id="unit-toggle">Switch to °F</button>
+          </div>
+          <p class="subtitle">These preferences shape your personalized activity recommendations on every page.</p>
 
-      <section class="chart-card">
-        <h2>5. San Diego County population density</h2>
-        <p class="subtitle">
-          Population density using Census counts (red dots) and a fixed land area of 4,207 sq mi, with linear interpolation between census years.
-        </p>
-        <div class="chart" id="chart-population"></div>
-      </section>
-      <div>
-        <h2>Write-Up</h2>
-        <p>
-          We built "San Diego Climate Over the Last Century," an interactive D3.js visualization using NOAA CMIP6 historical simulation data covering annual mean temperature, temperature anomalies, sea surface height, and precipitation near San Diego. We also pulled U.S. Census data for county population density from 1925 to 2014. The page is structured as a scrollable story, walking readers through warming trends, anomalies, sea level, rainfall, and population in sequence.
-        </p>
-        <p>
-          The biggest design challenge ahead is weaving the five plots into one coherent story. Right now each chart stands on its own, so we will need to balance interactivity and annotation to avoid overplotting. Presenting sea level and precipitation data without misleading readers will also require careful framing since the numbers come from CMIP6 model simulations, not direct observations. Layering in the population data will add meaningful context about what these climate shifts actually mean for people living in San Diego.
-        </p>
+          <div class="weather-illustration">
+            <svg id="weather-svg" viewBox="0 0 420 190" xmlns="http://www.w3.org/2000/svg">
+              <rect id="sky-rect" x="0" y="0" width="420" height="190" rx="10" fill="rgb(185,225,255)"/>
+              <rect x="0" y="155" width="420" height="35" fill="#8dc97d"/>
+              <rect x="0" y="151" width="420" height="8" fill="#6bbc5c"/>
+              <g id="illus-sun" opacity="0">
+                <line x1="355" y1="15" x2="355" y2="4" stroke="#f9d531" stroke-width="4" stroke-linecap="round"/>
+                <line x1="376" y1="22" x2="384" y2="14" stroke="#f9d531" stroke-width="4" stroke-linecap="round"/>
+                <line x1="383" y1="44" x2="394" y2="44" stroke="#f9d531" stroke-width="4" stroke-linecap="round"/>
+                <line x1="376" y1="66" x2="384" y2="74" stroke="#f9d531" stroke-width="4" stroke-linecap="round"/>
+                <line x1="355" y1="73" x2="355" y2="84" stroke="#f9d531" stroke-width="4" stroke-linecap="round"/>
+                <line x1="334" y1="66" x2="326" y2="74" stroke="#f9d531" stroke-width="4" stroke-linecap="round"/>
+                <line x1="327" y1="44" x2="316" y2="44" stroke="#f9d531" stroke-width="4" stroke-linecap="round"/>
+                <line x1="334" y1="22" x2="326" y2="14" stroke="#f9d531" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="355" cy="44" r="22" fill="#f9d531"/>
+              </g>
+              <g id="illus-clouds" opacity="0.85">
+                <!-- Main cloud cluster top-right -->
+                <ellipse cx="342" cy="35" rx="48" ry="24" fill="white" opacity="0.95"/>
+                <ellipse cx="378" cy="42" rx="36" ry="20" fill="white" opacity="0.92"/>
+                <ellipse cx="312" cy="44" rx="34" ry="18" fill="#e8e8e8" opacity="0.88"/>
+                <ellipse cx="358" cy="22" rx="26" ry="16" fill="white" opacity="0.9"/>
+                <!-- Mid cloud center-left -->
+                <ellipse cx="130" cy="40" rx="38" ry="18" fill="white" opacity="0.78"/>
+                <ellipse cx="158" cy="34" rx="26" ry="15" fill="white" opacity="0.82"/>
+                <ellipse cx="108" cy="48" rx="24" ry="13" fill="#dce8f0" opacity="0.75"/>
+                <!-- Small cloud far left -->
+                <ellipse cx="46" cy="52" rx="28" ry="13" fill="white" opacity="0.68"/>
+                <ellipse cx="66" cy="44" rx="20" ry="12" fill="white" opacity="0.72"/>
+              </g>
+              <g id="illus-rain" opacity="0">
+                <!-- Row 1 -->
+                <line x1="38"  y1="62" x2="31"  y2="84"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="62"  y1="52" x2="55"  y2="74"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="86"  y1="66" x2="79"  y2="88"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="110" y1="50" x2="103" y2="72"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="134" y1="62" x2="127" y2="84"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="158" y1="48" x2="151" y2="70"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="228" y1="54" x2="221" y2="76"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="252" y1="64" x2="245" y2="86"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="276" y1="50" x2="269" y2="72"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="300" y1="62" x2="293" y2="84"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
+                <!-- Row 2 (offset, slightly lighter) -->
+                <line x1="50"  y1="88" x2="43"  y2="110" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
+                <line x1="74"  y1="78" x2="67"  y2="100" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
+                <line x1="98"  y1="90" x2="91"  y2="112" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
+                <line x1="122" y1="76" x2="115" y2="98"  stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
+                <line x1="146" y1="88" x2="139" y2="110" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
+                <line x1="240" y1="80" x2="233" y2="102" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
+                <line x1="264" y1="90" x2="257" y2="112" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
+                <line x1="288" y1="78" x2="281" y2="100" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
+                <line x1="312" y1="88" x2="305" y2="110" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
+                <!-- Row 3 (faint, near ground) -->
+                <line x1="56"  y1="112" x2="50" y2="130" stroke="#78b8cc" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="104" y1="116" x2="98" y2="134" stroke="#78b8cc" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="152" y1="112" x2="146" y2="130" stroke="#78b8cc" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="248" y1="112" x2="242" y2="130" stroke="#78b8cc" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="296" y1="116" x2="290" y2="134" stroke="#78b8cc" stroke-width="1.5" stroke-linecap="round"/>
+              </g>
+              <rect id="heat-overlay" x="0" y="0" width="420" height="190" rx="10" fill="#ff3322" opacity="0" pointer-events="none"/>
+              <g id="illus-person">
+                <!-- invisible hitbox -->
+                <rect x="165" y="58" width="60" height="100" fill="transparent" stroke="none"/>
+                <circle cx="195" cy="80" r="16" fill="none" stroke="#1a2332" stroke-width="2.5"/>
+                <!-- Eyes -->
+                <circle cx="190" cy="77" r="2.2" fill="#1a2332"/>
+                <circle cx="200" cy="77" r="2.2" fill="#1a2332"/>
+                <!-- Smile -->
+                <path d="M 188 87 Q 195 93 202 87" fill="none" stroke="#1a2332" stroke-width="1.8" stroke-linecap="round"/>
+                <line x1="195" y1="96" x2="195" y2="132" stroke="#1a2332" stroke-width="2.5"/>
+                <line x1="195" y1="108" x2="172" y2="98" stroke="#1a2332" stroke-width="2.5"/>
+                <line x1="195" y1="108" x2="218" y2="98" stroke="#1a2332" stroke-width="2.5"/>
+                <line x1="195" y1="132" x2="178" y2="154" stroke="#1a2332" stroke-width="2.5"/>
+                <line x1="195" y1="132" x2="212" y2="154" stroke="#1a2332" stroke-width="2.5"/>
+              </g>
+            </svg>
+          </div>
+
+          <div class="rec-prefs">
+            <div class="pref-row">
+              <label class="pref-label">Ideal outdoor temp</label>
+              <span class="pref-val" id="label-pref-temp">24°C</span>
+              <input type="range" id="pref-temp" min="18" max="30" step="1" value="24">
+              <div class="pref-ends"><span id="pref-temp-lo">18°C: Love cool days</span><span id="pref-temp-hi">30°C: Love the heat</span></div>
+            </div>
+            <div class="pref-row">
+              <label class="pref-label">Rain tolerance</label>
+              <span class="pref-val" id="label-dry">Moderate</span>
+              <input type="range" id="pref-dry" min="0" max="1" step="0.25" value="0.5" list="dry-ticks">
+              <datalist id="dry-ticks">
+                <option value="0"></option><option value="0.25"></option>
+                <option value="0.5"></option><option value="0.75"></option><option value="1"></option>
+              </datalist>
+              <div class="pref-ends"><span>Rain ok</span><span>Must be dry</span></div>
+            </div>
+            <div class="pref-row" id="sun-pref-row">
+              <label class="pref-label">Sunniness</label>
+              <span class="pref-val" id="label-sun">Moderate</span>
+              <input type="range" id="pref-sun" min="0" max="1" step="0.25" value="0.5" list="sun-ticks">
+              <datalist id="sun-ticks">
+                <option value="0"></option><option value="0.25"></option>
+                <option value="0.5"></option><option value="0.75"></option><option value="1"></option>
+              </datalist>
+              <div class="pref-ends"><span>Love cloudy</span><span>Love sunny</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="page-cta-row">
+          <button class="page-cta" id="btn-next-1">Explore San Diego's climate →</button>
+        </div>
+
       </div>
-    </main>
+    </div>
 
-    <footer>
-      <p id="meta-source"></p>
-      <p>
-        Data:
-        <a
-          href="https://console.cloud.google.com/marketplace/product/noaa-public/cmip6"
-          >NOAA Public CMIP6 on Google Cloud</a
-        >. Course context:
-        <a href="https://dsc106.com/projects/project3/">DSC 106 Project 3</a>.
-        CMIP6 values are model simulations. Population data are from the U.S.
-        Census, not CMIP6.
-      </p>
-    </footer>
+    <!-- ════════════════════════════════════════════════════════════════
+         PAGE 2 — Historic climate
+    ═════════════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-2">
+      <div class="page-inner">
+
+        <!-- Activity recommendation (personalized by page-1 prefs) -->
+        <section class="chart-card">
+          <h2>Your Monthly Activity Recommendations</h2>
+          <p class="subtitle">
+            Two time windows, your preferences applied to both.
+            The near-identical results say it all: San Diego's liveable climate has barely budged in 90 years.
+            <span id="cloud-note" style="color:var(--muted);font-style:italic"></span>
+          </p>
+          <div id="chart-visit-rec"></div>
+        </section>
+
+        <!-- Toggled hero chart -->
+        <section class="chart-card hero-card chart-toggled-card">
+          <div class="chart-tab-bar">
+            <button class="chart-tab-btn active" data-tab="temp">Temperature</button>
+            <button class="chart-tab-btn" data-tab="precip">Precipitation</button>
+            <button class="chart-tab-btn" data-tab="cloud">Cloud Cover</button>
+          </div>
+
+          <!-- Temperature pane -->
+          <div class="chart-tab-pane active" data-tab="temp">
+            <h2>San Diego's Monthly Temperature, 1925–2014</h2>
+            <p class="subtitle">
+              Lines: bold=each year, gray=all 90 years, dashed=long-run average<br>
+              Dots: <span style="color:#c44e52;font-weight:600">red</span>=warmer, <span style="color:#4a90a4;font-weight:600">blue</span>=cooler
+            </p>
+            <div class="chart" id="chart-temp-seasonal"></div>
+            <div class="panel-ctrl slider-below-chart">
+              <div class="ctrl-header">
+                <button id="play-btn-t" class="play-btn">&#9654; Play</button>
+                <span class="year-badge" id="year-label-t">1925</span>
+                <div class="speed-group">
+                  <span class="speed-label">Speed:</span>
+                  <button class="speed-btn-t speed-btn" data-ms="1000">0.5×</button>
+                  <button class="speed-btn-t speed-btn active" data-ms="500">1×</button>
+                  <button class="speed-btn-t speed-btn" data-ms="250">2×</button>
+                  <button class="speed-btn-t speed-btn" data-ms="100">5×</button>
+                </div>
+              </div>
+              <div class="slider-align">
+                <input type="range" id="year-slider-t" class="year-slider" min="1925" max="2014" step="any" value="1925">
+                <div class="year-ticks">
+                  <span>1925</span><span>1940</span><span>1955</span><span>1970</span><span>1985</span><span>2000</span><span>2014</span>
+                </div>
+              </div>
+            </div>
+            <div id="month-trend-panel" class="month-trend-panel hidden">
+              <div class="month-trend-header">
+                <h3 id="month-trend-title"></h3>
+                <button class="month-trend-close" id="month-trend-close" aria-label="Close">✕</button>
+              </div>
+              <div id="month-trend-chart"></div>
+            </div>
+          </div>
+
+          <!-- Precipitation pane -->
+          <div class="chart-tab-pane" data-tab="precip">
+            <h2>San Diego's Monthly Precipitation, 1925–2014</h2>
+            <p class="subtitle">
+              Lines: bold=each year, gray=all 90 years, dashed=long-run average<br>
+              Dots: <span style="color:#4a90a4;font-weight:600">blue</span>=wetter, <span style="color:#c4936a;font-weight:600">orange</span>=drier
+            </p>
+            <div class="chart" id="chart-precip-seasonal"></div>
+            <div class="panel-ctrl slider-below-chart">
+              <div class="ctrl-header">
+                <button id="play-btn-p" class="play-btn">&#9654; Play</button>
+                <span class="year-badge" id="year-label-p">1925</span>
+                <div class="speed-group">
+                  <span class="speed-label">Speed:</span>
+                  <button class="speed-btn-p speed-btn" data-ms="1000">0.5×</button>
+                  <button class="speed-btn-p speed-btn active" data-ms="500">1×</button>
+                  <button class="speed-btn-p speed-btn" data-ms="250">2×</button>
+                  <button class="speed-btn-p speed-btn" data-ms="100">5×</button>
+                </div>
+              </div>
+              <div class="slider-align">
+                <input type="range" id="year-slider-p" class="year-slider" min="1925" max="2014" step="any" value="1925">
+                <div class="year-ticks">
+                  <span>1925</span><span>1940</span><span>1955</span><span>1970</span><span>1985</span><span>2000</span><span>2014</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cloud cover pane -->
+          <div class="chart-tab-pane" data-tab="cloud">
+            <h2>San Diego's Monthly Cloud Cover, 1925–2014</h2>
+            <p class="subtitle">
+              Lines: bold=each year, gray=all 90 years, dashed=long-run average<br>
+              Dots: <span style="color:#f4a261;font-weight:600">yellow</span>=sunnier, <span style="color:#9bb3c9;font-weight:600">blue</span>=cloudier
+              <span id="cloud-chart-note" style="color:var(--muted);font-style:italic"></span>
+            </p>
+            <div class="chart" id="chart-cloud-seasonal"></div>
+            <div class="panel-ctrl slider-below-chart">
+              <div class="ctrl-header">
+                <button id="play-btn-c" class="play-btn">&#9654; Play</button>
+                <span class="year-badge" id="year-label-c">1925</span>
+                <div class="speed-group">
+                  <span class="speed-label">Speed:</span>
+                  <button class="speed-btn-c speed-btn" data-ms="1000">0.5×</button>
+                  <button class="speed-btn-c speed-btn active" data-ms="500">1×</button>
+                  <button class="speed-btn-c speed-btn" data-ms="250">2×</button>
+                  <button class="speed-btn-c speed-btn" data-ms="100">5×</button>
+                </div>
+              </div>
+              <div class="slider-align">
+                <input type="range" id="year-slider-c" class="year-slider" min="1925" max="2014" step="any" value="1925">
+                <div class="year-ticks">
+                  <span>1925</span><span>1940</span><span>1955</span><span>1970</span><span>1985</span><span>2000</span><span>2014</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- Narrative (below the visual) -->
+        <div class="chart-card climate-narrative">
+          <h2>Ninety Years of Familiar Weather</h2>
+          <p>
+            San Diego's climate has been defined by consistency. The same mild winters, dry summers, and coastal marine layer you see in 1925 appear again in 2014. That stability is real.
+          </p>
+          <p>
+            But a quiet signal persists. <strong>13 of the 15 years since 2000 ran warmer than the mid-century average,</strong> and the recent decade sits about 0.34°C above the 90-year mean: small, but steady.
+          </p>
+          <p style="margin-bottom:0">
+            Precipitation tells a wilder story. San Diego's rainfall is defined by its extremes. In 1959, the city received 766 mm of rain. The very next year: 222 mm. A 544 mm swing in twelve months. Twenty-five of the 90 years topped 400 mm; only three fell below 150 mm. <strong>The "average" San Diego year is actually rare,</strong> and climate projections suggest the swings intensify as warming accelerates.
+          </p>
+        </div>
+
+        <div class="page-nav-row">
+          <button class="page-back" id="btn-back-2">← Back</button>
+          <button class="page-cta" id="btn-next-2">See the future for your great-grandchildren →</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         PAGE 3 — Future scenarios
+    ═════════════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-3">
+      <div class="page-inner">
+
+        <div class="future-hero">
+          <h2 class="future-title">What could San Diego look like in 2100?</h2>
+          <p class="future-tagline">
+            By 2100, your great-grandchildren will inherit the climate we leave behind.
+            Choose a scenario to see how San Diego's seasons and the activities that define life here might shift.
+          </p>
+        </div>
+
+        <!-- Scenario selector -->
+        <div class="chart-card scenario-selector">
+          <h2>Choose a future scenario</h2>
+          <p class="subtitle">Each reflects a different level of global climate action.</p>
+          <div class="scenario-btns">
+            <button class="scenario-btn" data-ssp="ssp126">
+              <span class="ssp-badge ssp126">SSP 1-2.6</span>
+              <span class="ssp-name">Clean Future</span>
+              <span class="ssp-desc">Strong global action. ~1.8°C above pre-industrial by 2100.</span>
+            </button>
+            <button class="scenario-btn" data-ssp="ssp245">
+              <span class="ssp-badge ssp245">SSP 2-4.5</span>
+              <span class="ssp-name">Middle Road</span>
+              <span class="ssp-desc">Moderate action. ~2.7°C above pre-industrial by 2100.</span>
+            </button>
+            <button class="scenario-btn" data-ssp="ssp370">
+              <span class="ssp-badge ssp370">SSP 3-7.0</span>
+              <span class="ssp-name">High Emissions</span>
+              <span class="ssp-desc">Limited action. ~3.6°C above pre-industrial by 2100.</span>
+            </button>
+            <button class="scenario-btn active" data-ssp="ssp585">
+              <span class="ssp-badge ssp585">SSP 5-8.5</span>
+              <span class="ssp-name">Fossil Future</span>
+              <span class="ssp-desc">Business as usual. ~4.4°C above pre-industrial by 2100.</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Generation timeline -->
+        <div class="generation-banner">
+          <div class="gen-item gen-you">
+            <span class="gen-year">2025</span>
+            <span class="gen-label">You</span>
+          </div>
+          <div class="gen-arrow">→</div>
+          <div class="gen-item">
+            <span class="gen-year">~2050</span>
+            <span class="gen-label">Your children</span>
+          </div>
+          <div class="gen-arrow">→</div>
+          <div class="gen-item">
+            <span class="gen-year">~2075</span>
+            <span class="gen-label">Your grandchildren</span>
+          </div>
+          <div class="gen-arrow">→</div>
+          <div class="gen-item gen-end">
+            <span class="gen-year">~2100</span>
+            <span class="gen-label">Your great-grandchildren</span>
+          </div>
+        </div>
+
+        <!-- Future activity recommendation -->
+        <section class="chart-card">
+          <h2>Monthly Activities — <span id="future-scenario-label">2091–2100</span></h2>
+          <p class="subtitle">Your preferences applied to end-of-century climate — compared to today (2005–2014).</p>
+          <div id="chart-future-rec" class="future-placeholder">
+            <p class="placeholder-msg">⏳ Run <code>python scripts/extract_ssp.py</code> then refresh.</p>
+          </div>
+        </section>
+
+        <!-- Future seasonal chart — same toggle format as page 2 -->
+        <section class="chart-card hero-card chart-toggled-card">
+          <div class="chart-tab-bar">
+            <button class="future-tab-btn active" data-var="temp_c">Temperature</button>
+            <button class="future-tab-btn" data-var="precip_mm">Precipitation</button>
+            <button class="future-tab-btn" data-var="clt_pct">Cloud Cover</button>
+          </div>
+          <div class="chart-tab-pane active" data-tab="future">
+            <h2>Monthly Climate: Today vs. <span id="future-chart-heading">2091–2100</span></h2>
+            <p class="subtitle">
+              Lines: dashed=today (2005–2014), solid=projected 2091–2100 average<br>
+              Band: shaded area=year-to-year spread, wider means more volatile years, hover dots for details
+            </p>
+            <div class="chart" id="chart-future-seasonal">
+              <p class="placeholder-msg" style="padding:3rem 0;text-align:center">
+                ⏳ Run <code>python scripts/extract_ssp.py</code> then refresh.
+              </p>
+            </div>
+            <p id="future-chart-desc" class="future-chart-desc">Temperatures are projected to rise across all months, with summer peaks growing especially intense. Even modest warming accelerates heat stress and wildfire risk.</p>
+          </div>
+        </section>
+
+        <div class="page-nav-row">
+          <button class="page-back" id="btn-back-3">← Back to today's climate</button>
+        </div>
+
+        <footer>
+          <p id="meta-source"></p>
+          <p>
+            Historical data:
+            <a href="https://console.cloud.google.com/marketplace/product/noaa-public/cmip6">NOAA Public CMIP6 on Google Cloud</a>
+            (GFDL-ESM4 historical, r1i1p1f1). Future projections: GFDL-ESM4 ScenarioMIP (SSP 1-2.6 through 5-8.5).
+            Course context: <a href="https://dsc106.com/projects/project3/">DSC 106 Project 3</a>.
+            CMIP6 values are model simulations.
+          </p>
+        </footer>
+
+      </div>
+    </div>
+
+    </div><!-- /page-container -->
 
     <script src="js/charts.js"></script>
   </body>
