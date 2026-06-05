@@ -2,6 +2,8 @@
 let tempUnit = 'C';               // 'C' or 'F'
 let _updateRecChart = null;       // exposed from chartVisitRecommendation closure
 let _updateTempSeasonalUnit = null; // exposed from chartSeasonalCurve closure
+let globalSspData = null;         // set in init() so goTo(3) can re-trigger animations
+let globalGoTo = null;            // exposed from initPageNav so other functions can navigate
 
 function fmtTemp(c) {
   return tempUnit === 'F'
@@ -92,11 +94,12 @@ function chartSeasonalCurve(rawData) {
   tSvg.append('g').attr('class', 'axis').attr('transform', `translate(0,${tBot})`)
     .call(d3.axisBottom(x).tickFormat(i => MONTHS[i - 1]));
 
-  years.forEach(yr => {
-    tSvg.append('path').datum(byYear.get(yr).temps)
-      .attr('fill', 'none').attr('stroke', '#d0dae4').attr('stroke-width', 0.8)
-      .attr('pointer-events', 'none').attr('d', tempLineGen);
-  });
+  const tYearPaths = tSvg.selectAll('.yr-line-t')
+    .data(years).join('path')
+    .attr('class', 'yr-line-t')
+    .attr('fill', 'none').attr('stroke', '#d0dae4').attr('stroke-width', 0.8)
+    .attr('pointer-events', 'none').attr('opacity', 0)
+    .attr('d', yr => tempLineGen(byYear.get(yr).temps));
 
   tSvg.append('path').datum(monthStats.map(s => s.tempMean))
     .attr('fill', 'none').attr('stroke', '#9bb3c9')
@@ -106,6 +109,7 @@ function chartSeasonalCurve(rawData) {
     .attr('dy', '0.35em').attr('fill', '#9bb3c9').attr('font-size', 10).text('avg');
 
   const currentTempLine = tSvg.append('path')
+    .attr('class', 'current-year-line')
     .attr('fill', 'none').attr('stroke', '#1a2332')
     .attr('stroke-width', 2.5).attr('stroke-linejoin', 'round');
 
@@ -168,11 +172,12 @@ function chartSeasonalCurve(rawData) {
   pSvg.append('g').attr('class', 'axis').attr('transform', `translate(0,${pBot})`)
     .call(d3.axisBottom(x).tickFormat(i => MONTHS[i - 1]));
 
-  years.forEach(yr => {
-    pSvg.append('path').datum(byYear.get(yr).precips)
-      .attr('fill', 'none').attr('stroke', '#c6d9e8').attr('stroke-width', 0.8)
-      .attr('pointer-events', 'none').attr('d', precipLineGen);
-  });
+  const pYearPaths = pSvg.selectAll('.yr-line-p')
+    .data(years).join('path')
+    .attr('class', 'yr-line-p')
+    .attr('fill', 'none').attr('stroke', '#c6d9e8').attr('stroke-width', 0.8)
+    .attr('pointer-events', 'none').attr('opacity', 0)
+    .attr('d', yr => precipLineGen(byYear.get(yr).precips));
 
   pSvg.append('path').datum(monthStats.map(s => s.precipMean))
     .attr('fill', 'none').attr('stroke', '#9bb3c9')
@@ -182,6 +187,7 @@ function chartSeasonalCurve(rawData) {
     .attr('dy', '0.35em').attr('fill', '#9bb3c9').attr('font-size', 10).text('avg');
 
   const currentPrecipLine = pSvg.append('path')
+    .attr('class', 'current-year-line')
     .attr('fill', 'none').attr('stroke', '#1a2332')
     .attr('stroke-width', 2.5).attr('stroke-linejoin', 'round');
 
@@ -266,6 +272,7 @@ function chartSeasonalCurve(rawData) {
     const yr0 = Math.min(Math.floor(floatYr), YEAR_MAX - 1);
     const { temps } = interpData(yr0, yr0 + 1, floatYr - yr0);
     currentTempLine.attr('d', tempLineGen(temps));
+    tYearPaths.attr('opacity', yr => yr <= floatYr ? 1 : 0);
     tempDots.attr('cx', i => x(i + 1)).attr('cy', i => tY(temps[i]))
       .attr('fill', i => temps[i] > monthStats[i].tempMean ? '#c44e52' : '#4a90a4');
     const cx = timeX(floatYr);
@@ -277,6 +284,7 @@ function chartSeasonalCurve(rawData) {
     const yr0 = Math.min(Math.floor(floatYr), YEAR_MAX - 1);
     const { precips } = interpData(yr0, yr0 + 1, floatYr - yr0);
     currentPrecipLine.attr('d', precipLineGen(precips));
+    pYearPaths.attr('opacity', yr => yr <= floatYr ? 1 : 0);
     precipDots.attr('cx', i => x(i + 1)).attr('cy', i => pY(precips[i]))
       .attr('fill', i => precips[i] >= monthStats[i].precipMean ? '#4a90a4' : '#c4936a');
     const cx = timeX(floatYr);
@@ -465,12 +473,13 @@ function chartCloudCurve(rawData) {
   svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${cBot})`)
     .call(d3.axisBottom(x).tickFormat(i => MONTHS[i - 1]));
 
-  // Background lines (all years)
-  years.forEach(yr => {
-    svg.append('path').datum(byYear.get(yr))
-      .attr('fill', 'none').attr('stroke', '#d8e3ea').attr('stroke-width', 0.8)
-      .attr('pointer-events', 'none').attr('d', cltLineGen);
-  });
+  // Background lines — revealed as each year passes
+  const cYearPaths = svg.selectAll('.yr-line-c')
+    .data(years).join('path')
+    .attr('class', 'yr-line-c')
+    .attr('fill', 'none').attr('stroke', '#d8e3ea').attr('stroke-width', 0.8)
+    .attr('pointer-events', 'none').attr('opacity', 0)
+    .attr('d', yr => cltLineGen(byYear.get(yr)));
 
   // Mean reference
   svg.append('path').datum(monthMeans)
@@ -482,6 +491,7 @@ function chartCloudCurve(rawData) {
 
   // Current year line + dots
   const currentCltLine = svg.append('path')
+    .attr('class', 'current-year-line')
     .attr('fill', 'none').attr('stroke', '#1a2332')
     .attr('stroke-width', 2.5).attr('stroke-linejoin', 'round');
 
@@ -519,6 +529,7 @@ function chartCloudCurve(rawData) {
     const yr0 = Math.min(Math.floor(floatYr), YEAR_MAX - 1);
     const clt = interpClt(yr0, yr0 + 1, floatYr - yr0);
     currentCltLine.attr('d', cltLineGen(clt));
+    cYearPaths.attr('opacity', yr => yr <= floatYr ? 1 : 0);
     cltDots.attr('cx', i => x(i + 1)).attr('cy', i => cY(clt[i]))
       .attr('fill', i => clt[i] < monthMeans[i] ? '#f4a261' : '#9bb3c9');
     const cx = timeX(floatYr);
@@ -840,7 +851,7 @@ function chartFutureSeasonalCurve(containerId, present, future, variable) {
   const pad = Math.max((d3.max(allVals) - d3.min(allVals)) * 0.15, 1);
 
   const W = 900, H = 320;
-  const xLeft = 58, xRight = W - 48;
+  const xLeft = 58, xRight = W - 118;
   const top = 28, bot = 264;
 
   const svg = d3.select(container).append('svg')
@@ -877,7 +888,7 @@ function chartFutureSeasonalCurve(containerId, present, future, variable) {
   const lineGen = d3.line().x((_, i) => x(i + 1)).y(d => y(d))
     .defined(d => d != null).curve(curve);
 
-  // ── Std-dev band (year-to-year variability) ───────────────────────
+  // ── Std-dev band (year-to-year variability) — fades in ───────────
   const bandData = d3.range(12).map(i => ({
     mean: fByM.get(i + 1),
     std:  fStdByM.get(i + 1),
@@ -885,7 +896,7 @@ function chartFutureSeasonalCurve(containerId, present, future, variable) {
   if (bandData.some(d => d.std != null)) {
     svg.append('path')
       .datum(bandData)
-      .attr('fill', cfg.posColor).attr('fill-opacity', 0.13).attr('stroke', 'none')
+      .attr('fill', cfg.posColor).attr('fill-opacity', 0).attr('stroke', 'none')
       .attr('pointer-events', 'none')
       .attr('d', d3.area()
         .x((_, i) => x(i + 1))
@@ -893,10 +904,12 @@ function chartFutureSeasonalCurve(containerId, present, future, variable) {
         .y1(d => d.mean != null ? y(Math.min(yDomain[1], d.mean + (d.std || 0))) : 0)
         .defined(d => d.mean != null)
         .curve(curve)
-      );
+      )
+      .transition().delay(150).duration(600).ease(d3.easeCubicOut)
+      .attr('fill-opacity', 0.13);
   }
 
-  // Present dashed line
+  // Present dashed line — visible immediately (the baseline "today")
   svg.append('path').datum(d3.range(1, 13).map(m => pByM.get(m)))
     .attr('fill', 'none').attr('stroke', '#9bb3c9')
     .attr('stroke-width', 1.5).attr('stroke-dasharray', '5,4')
@@ -907,16 +920,24 @@ function chartFutureSeasonalCurve(containerId, present, future, variable) {
     svg.append('text').attr('x', xRight + 6).attr('y', y(lastP)).attr('dy', '0.35em')
       .attr('fill', '#9bb3c9').attr('font-size', 10).text('now');
 
-  // Future bold line
-  svg.append('path').datum(d3.range(1, 13).map(m => fByM.get(m)))
+  // Future bold line — draws itself in left-to-right
+  const futurePath = svg.append('path').datum(d3.range(1, 13).map(m => fByM.get(m)))
     .attr('fill', 'none').attr('stroke', cfg.posColor)
     .attr('stroke-width', 2.5).attr('stroke-linejoin', 'round')
     .attr('pointer-events', 'none').attr('d', lineGen);
 
+  const futureLen = futurePath.node().getTotalLength();
+  futurePath
+    .attr('stroke-dasharray', futureLen)
+    .attr('stroke-dashoffset', futureLen)
+    .transition().delay(150).duration(900).ease(d3.easeLinear)
+    .attr('stroke-dashoffset', 0);
+
   const lastF = fByM.get(12);
   if (lastF != null)
     svg.append('text').attr('x', xRight + 6).attr('y', y(lastF)).attr('dy', '0.35em')
-      .attr('fill', cfg.posColor).attr('font-size', 10).text('2091–2100');
+      .attr('fill', cfg.posColor).attr('font-size', 10).attr('opacity', 0).text('2091–2100')
+      .transition().delay(1000).duration(300).attr('opacity', 1);
 
   // Dots on future line — color by direction of change, tooltip shows std dev
   const tooltip = d3.select('.tooltip');
@@ -931,8 +952,8 @@ function chartFutureSeasonalCurve(containerId, present, future, variable) {
       ? (isMore ? '#9bb3c9' : '#f4a261')
       : (isMore ? cfg.posColor : cfg.negColor);
 
-    svg.append('circle').attr('cx', x(m)).attr('cy', y(fVal))
-      .attr('r', 5).attr('fill', dotColor)
+    const dot = svg.append('circle').attr('cx', x(m)).attr('cy', y(fVal))
+      .attr('r', 5).attr('fill', dotColor).attr('opacity', 0)
       .attr('stroke', '#fff').attr('stroke-width', 1.5).style('cursor', 'pointer')
       .on('mouseover', function(event) {
         const delta = pVal != null ? (fVal - pVal) : null;
@@ -946,6 +967,8 @@ function chartFutureSeasonalCurve(containerId, present, future, variable) {
       .on('mousemove', e => tooltip.style('left', (e.clientX + 14) + 'px').style('top', (e.clientY - 36) + 'px'))
       .on('mouseout', () => tooltip.style('opacity', 0));
 
+    dot.transition().delay(900 + i * 50).duration(200).attr('opacity', 1);
+
     // Present dot (smaller)
     if (pVal != null)
       svg.append('circle').attr('cx', x(m)).attr('cy', y(pVal))
@@ -954,14 +977,32 @@ function chartFutureSeasonalCurve(containerId, present, future, variable) {
 }
 
 /* ── Page 2 chart tab toggle ─────────────────────────────────────── */
+function animateBoldLine(pane) {
+  if (!pane) return;
+  const boldLine = pane.querySelector('.current-year-line');
+  if (!boldLine) return;
+  const len = boldLine.getTotalLength();
+  if (!len) return;
+  d3.select(boldLine)
+    .attr('stroke-dasharray', len)
+    .attr('stroke-dashoffset', len)
+    .transition().duration(900).ease(d3.easeLinear)
+    .attr('stroke-dashoffset', 0)
+    .on('end', () => {
+      d3.select(boldLine).attr('stroke-dasharray', null).attr('stroke-dashoffset', null);
+    });
+}
+
 function initChartTabs() {
-  document.querySelectorAll('.chart-tab-btn').forEach(btn => {
+  document.querySelectorAll('#page-3 .chart-tab-btn').forEach(btn => {
     btn.addEventListener('click', function () {
       const card = this.closest('.chart-toggled-card');
       card.querySelectorAll('.chart-tab-btn').forEach(b => b.classList.remove('active'));
       card.querySelectorAll('.chart-tab-pane').forEach(p => p.classList.remove('active'));
       this.classList.add('active');
-      card.querySelector(`.chart-tab-pane[data-tab="${this.dataset.tab}"]`).classList.add('active');
+      const pane = card.querySelector(`.chart-tab-pane[data-tab="${this.dataset.tab}"]`);
+      pane.classList.add('active');
+      animateBoldLine(pane);
     });
   });
 }
@@ -1054,17 +1095,21 @@ function initWeatherIllustration() {
     const pDry  = +prefDryEl.value;
     const pSun  = +prefSunEl.value;
 
-    // Heat overlay: 0 at 18°C → 0.30 at 30°C
-    const heatOpacity = ((pTemp - 18) / 12) * 0.30;
-    const heatEl = document.getElementById('heat-overlay');
-    if (heatEl) heatEl.setAttribute('opacity', heatOpacity.toFixed(3));
-
-    // Sky color: cooler blue at 18°C, warmer/hazier at 30°C
+    // Sky color: blue at 18°C → white at 24°C → red at 30°C
     const skyEl = document.getElementById('sky-rect');
     if (skyEl) {
-      const r = Math.round(185 + (pTemp - 18) / 12 * 60);
-      const g = Math.round(225 - (pTemp - 18) / 12 * 20);
-      const b = Math.round(255 - (pTemp - 18) / 12 * 100);
+      let r, g, b;
+      if (pTemp <= 24) {
+        const t = (pTemp - 18) / 6;
+        r = Math.round(205 + t * (245 - 205));  // 205 → 245 (soft blue → near-white)
+        g = Math.round(228 + t * (245 - 228));  // 228 → 245
+        b = Math.round(255 + t * (255 - 255));  // 255 → 255
+      } else {
+        const t = (pTemp - 24) / 6;
+        r = Math.round(245 + t * (255 - 245));  // 245 → 255 (near-white → soft warm)
+        g = Math.round(245 + t * (210 - 245));  // 245 → 210
+        b = Math.round(255 + t * (190 - 255));  // 255 → 190
+      }
       skyEl.setAttribute('fill', `rgb(${r},${g},${b})`);
     }
 
@@ -1082,13 +1127,33 @@ function initWeatherIllustration() {
     if (cloudsEl) cloudsEl.setAttribute('opacity', cloudOpacity.toFixed(2));
   }
 
-  prefTempEl.addEventListener('input', update);
-  prefDryEl .addEventListener('input', update);
-  prefSunEl .addEventListener('input', update);
+  function updateRecSummary() {
+    const el = document.getElementById('rec-pref-summary');
+    if (!el) return;
+    const t = fmtTemp(+prefTempEl.value);
+    const dryLabels = ['Rain ok', 'Rain ok-ish', 'Moderate', 'Prefer dry', 'Must be dry'];
+    const sunLabels = ['Love clouds', 'Like clouds', 'Moderate', 'Like sun', 'Love sun'];
+    const dI = Math.round(+prefDryEl.value / 0.25);
+    const sI = Math.round(+prefSunEl.value / 0.25);
+    el.innerHTML = `Ideal temp: <strong>${t}</strong> &nbsp;·&nbsp; Rain: <strong>${dryLabels[dI]}</strong> &nbsp;·&nbsp; Sun: <strong>${sunLabels[sI]}</strong>`;
+  }
+
+  prefTempEl.addEventListener('input', () => { update(); updateRecSummary(); });
+  prefDryEl .addEventListener('input', () => { update(); updateRecSummary(); });
+  prefSunEl .addEventListener('input', () => { update(); updateRecSummary(); });
   update();
+  updateRecSummary();
 
   const personEl = document.getElementById('illus-person');
   if (personEl) {
+    // Mark drop as done after it finishes so it never replays
+    personEl.addEventListener('animationend', function onDrop(e) {
+      if (e.animationName === 'stickman-drop') {
+        personEl.classList.add('drop-done');
+        personEl.removeEventListener('animationend', onDrop);
+      }
+    });
+
     personEl.addEventListener('click', () => {
       if (personEl.classList.contains('flipping')) return;
       personEl.classList.add('flipping');
@@ -1100,6 +1165,7 @@ function initWeatherIllustration() {
 /* ── Page navigation ─────────────────────────────────────────────── */
 function initPageNav() {
   let current = 1;
+  let page2Visited = false;
 
   function goTo(n) {
     document.querySelectorAll('.page').forEach((p, i) => {
@@ -1112,29 +1178,123 @@ function initPageNav() {
     });
     current = n;
     document.querySelector('.page-container').scrollTop = 0;
+
+    if (n === 3 && !page2Visited) {
+      page2Visited = true;
+      setTimeout(() => {
+        const activePane = document.querySelector('#page-3 .chart-tab-pane.active');
+        animateBoldLine(activePane);
+      }, 80);
+    }
+
+    if (n === 5 && globalSspData) {
+      updateFutureCharts(globalSspData);
+    }
+
+    if (n === 6 && globalSspData) {
+      chartAllScenarios(globalSspData);
+      chartTempAnomalyHeatmap(globalSspData);
+    }
   }
 
   document.getElementById('btn-next-1').addEventListener('click', () => goTo(2));
   document.getElementById('btn-back-2').addEventListener('click', () => goTo(1));
   document.getElementById('btn-next-2').addEventListener('click', () => goTo(3));
   document.getElementById('btn-back-3').addEventListener('click', () => goTo(2));
+  document.getElementById('btn-next-3').addEventListener('click', () => goTo(4));
+  document.getElementById('btn-back-4').addEventListener('click', () => goTo(3));
+  document.getElementById('btn-back-5').addEventListener('click', () => goTo(4));
+  document.getElementById('btn-next-5').addEventListener('click', () => goTo(6));
+  document.getElementById('btn-back-6').addEventListener('click', () => goTo(5));
 
-  // Step numbers are always clickable — free navigation
   document.querySelectorAll('.step[data-page]').forEach(s => {
     s.addEventListener('click', () => goTo(+s.dataset.page));
   });
+
+  globalGoTo = goTo;
 }
 
 /* ── Scenario selector (page 3) ─────────────────────────────────── */
-let activeScenario = 'ssp585';
+let activeScenario = 'ssp585'; // default if user skips page 4
+
+const SCENARIO_NAMES = {
+  ssp126: 'Clean Future',
+  ssp245: 'Middle Road',
+  ssp370: 'High Emissions',
+  ssp585: 'Fossil Future',
+};
+const SCENARIO_FULL = {
+  ssp126: 'SSP 1-2.6 Clean Future',
+  ssp245: 'SSP 2-4.5 Middle Road',
+  ssp370: 'SSP 3-7.0 High Emissions',
+  ssp585: 'SSP 5-8.5 Fossil Future',
+};
+
+const SCENARIO_COLORS = {
+  ssp126: '#2a8c6e',
+  ssp245: '#e8a030',
+  ssp370: '#d9593a',
+  ssp585: '#7a1020',
+};
+
+function updateP5Header() {
+  const chipEl = document.getElementById('p5-chosen-name');
+  const fullEl = document.getElementById('future-scenario-label');
+  const col = SCENARIO_COLORS[activeScenario] || 'var(--accent)';
+  if (chipEl) {
+    chipEl.textContent = SCENARIO_NAMES[activeScenario] || activeScenario;
+    chipEl.style.color = col;
+    chipEl.style.borderColor = col;
+    chipEl.onclick = () => document.getElementById('btn-back-5')?.click();
+  }
+  if (fullEl) fullEl.textContent = SCENARIO_FULL[activeScenario] || activeScenario;
+}
 
 function initScenarioSelector(sspData) {
-  document.querySelectorAll('.scenario-btn').forEach(btn => {
+  document.querySelectorAll('.scenario-card-v').forEach(btn => {
     btn.addEventListener('click', function () {
-      document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.scenario-card-v').forEach(b => b.classList.remove('active'));
       this.classList.add('active');
       activeScenario = this.dataset.ssp;
-      if (sspData) updateFutureCharts(sspData);
+      updateP5Header();
+
+      const col = SCENARIO_COLORS[activeScenario] || '#1571a8';
+      const self = this;
+
+      // Phase 1 (0ms): dim others, lift + glow the chosen card
+      document.querySelectorAll('.scenario-card-v').forEach(b => {
+        if (b !== self) {
+          b.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
+          b.style.opacity = '0.18';
+          b.style.transform = 'translateY(4px) scale(0.98)';
+        } else {
+          b.style.transition = 'transform 0.18s ease, box-shadow 0.18s ease';
+          b.style.transform = 'scale(1.03)';
+          b.style.boxShadow = `0 8px 36px ${col}60`;
+        }
+      });
+
+      // Phase 2 (160ms): color wash floods in
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `position:fixed;inset:0;z-index:9999;pointer-events:none;background:${col};opacity:0;transition:opacity 0.22s ease;`;
+      document.body.appendChild(overlay);
+      setTimeout(() => { overlay.style.opacity = '0.42'; }, 160);
+
+      // Phase 3 (380ms): navigate at peak of wash, then wash fades out
+      setTimeout(() => {
+        globalGoTo?.(5);
+        overlay.style.transition = 'opacity 0.35s ease';
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+          overlay.remove();
+          document.querySelectorAll('.scenario-card-v').forEach(b => {
+            b.style.opacity = '';
+            b.style.transform = '';
+            b.style.boxShadow = '';
+            b.style.transition = '';
+          });
+        }, 380);
+      }, 380);
     });
   });
 }
@@ -1154,13 +1314,7 @@ function updateFutureCharts(sspData) {
   const present = sspData.filter(d => d.scenario.startsWith('present'));
   const future  = sspData.filter(d => d.scenario.startsWith(activeScenario));
 
-  const labelMap = {
-    ssp126: 'SSP 1-2.6 Clean Future',
-    ssp245: 'SSP 2-4.5 Middle Road',
-    ssp370: 'SSP 3-7.0 High Emissions',
-    ssp585: 'SSP 5-8.5 Fossil Future',
-  };
-  d3.select('#future-scenario-label').text(`${labelMap[activeScenario]} — 2091–2100`);
+  updateP5Header();
 
   // ── Activity recommendation cards ─────────────────────────────────
   const recEl = document.getElementById('chart-future-rec');
@@ -1219,7 +1373,7 @@ function updateFutureCharts(sspData) {
     .text('Today (2005–2014)');
   recSvg.append('text').attr('x', startX).attr('y', row2LabelY + 11)
     .attr('font-size', 11).attr('font-weight', '600').attr('fill', '#0b6e99')
-    .text(`${labelMap[activeScenario]} — 2091–2100`);
+    .text(`${SCENARIO_FULL[activeScenario] || activeScenario}, 2091–2100`);
 
   [
     { data: present, cardsY: row1CardsY },
@@ -1261,6 +1415,426 @@ function updateFutureCharts(sspData) {
   // ── Future seasonal chart (same format as page 2) ─────────────────
   chartFutureSeasonalCurve('chart-future-seasonal', present, future, activeFutureVar);
   setFutureChartDesc(activeFutureVar);
+  chartConsequences(activeScenario);
+}
+
+/* ── Page 5: Local consequence cards ────────────────────────────── */
+// Severity and descriptions grounded in the model data:
+// - Fire threshold 27°C: crossed only in ssp370 (Aug=27.0°C) and ssp585 (Aug=28.3°C)
+// - October warming: ssp126=+2.2°C, ssp245=+3.3°C, ssp370=+4.6°C, ssp585=+4.5°C
+// - Feb precip: ssp245 +35mm (+57%), ssp370 +43mm (+70%)
+// - Jan precip: ssp585 +44mm (+68%), nearly doubles
+// - IPCC AR6 sea level medians: ssp126~320mm, ssp245~440mm, ssp370~630mm, ssp585~900mm
+const CONSEQ_DATA = {
+  ssp126: [
+    { id:'beach', title:'Beach Loss',       level:1, label:'Manageable',
+      desc:'Seas rise ~0.3m by 2100. Most beaches narrow at exposed headlands but survive. The wide sandy stretches remain accessible.' },
+    { id:'kelp',  title:'Kelp Forests',     level:1, label:'Manageable',
+      desc:'Average warming of only +1°C. Summer ocean temps edge higher but stay within a range kelp can manage with good local conservation.' },
+    { id:'flood', title:'Coastal Flooding', level:1, label:'Manageable',
+      desc:'December gains ~30mm of rainfall but total annual amounts stay similar. Infrastructure handles most events without major disruption.' },
+    { id:'fire',  title:'Wildfire Risk',    level:1, label:'Manageable',
+      desc:'August reaches 25.8°C, well below the 27°C danger threshold. Wildfire seasons extend slightly at the edges but no critical line is crossed.' },
+  ],
+  ssp245: [
+    { id:'beach', title:'Beach Loss',       level:2, label:'Notable',
+      desc:'~0.4m rise. Narrower beaches face serious squeeze at exposed spots. Sections already backed by development become vulnerable to seasonal flooding.' },
+    { id:'kelp',  title:'Kelp Forests',     level:2, label:'Notable',
+      desc:'October alone jumps +3.3°C, extending warm-water months deep into fall. Kelp recovery between heat events becomes increasingly difficult to sustain.' },
+    { id:'flood', title:'Coastal Flooding', level:2, label:'Notable',
+      desc:'February nearly doubles in rainfall (+35mm, from 61 to 96mm). Individual storm events overwhelm drainage systems not built for this intensity.' },
+    { id:'fire',  title:'Wildfire Risk',    level:2, label:'Notable',
+      desc:'August hits 26.3°C, just 0.7°C below the 27°C fire threshold. October climbs 3.3°C. The region inches toward the edge without yet crossing it.' },
+  ],
+  ssp370: [
+    { id:'beach', title:'Beach Loss',       level:3, label:'Significant',
+      desc:'~0.6m rise crosses the threshold where many beaches get trapped between rising water and fixed seawalls. The squeeze accelerates dramatically.' },
+    { id:'kelp',  title:'Kelp Forests',     level:3, label:'Significant',
+      desc:'October surges +4.6°C above today. Sustained warm periods outpace kelp reproduction cycles; large-scale collapse of kelp forests becomes likely.' },
+    { id:'flood', title:'Coastal Flooding', level:3, label:'Significant',
+      desc:'February hits +43mm above today (+70%). Year-to-year variability also widens sharply: some years bring catastrophic floods, others almost nothing.' },
+    { id:'fire',  title:'Wildfire Risk',    level:3, label:'Significant',
+      desc:'August reaches exactly 27°C, crossing the fire threshold for the first time. October (+4.6°C) creates a dangerous second fire window late in fall.' },
+  ],
+  ssp585: [
+    { id:'beach', title:'Beach Loss',       level:4, label:'Severe',
+      desc:'~0.9m rise combined with intensified storm surge. Several of San Diego\'s iconic beaches become trapped and physically disappear by end of century.' },
+    { id:'kelp',  title:'Kelp Forests',     level:4, label:'Severe',
+      desc:'All months warmer by 3 to 4°C. Persistent high temperatures year-round prevent kelp recruitment. Ecosystem collapse becomes near-certain.' },
+    { id:'flood', title:'Coastal Flooding', level:4, label:'Severe',
+      desc:'January nearly doubles (+44mm). Added to ~0.9m sea level rise, low-lying areas like Imperial Beach face repeated inundation that becomes the norm.' },
+    { id:'fire',  title:'Wildfire Risk',    level:4, label:'Severe',
+      desc:'August hits 28.3°C, well above the 27°C threshold. August also loses 25mm of rain. Fire danger months are entrenched and far more extreme.' },
+  ],
+};
+
+const ICONS = {
+  beach:`<svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 22 Q9 14 18 22 Q27 30 34 22"/><path d="M2 28 Q9 20 18 28 Q27 36 34 28"/><rect x="2" y="30" width="32" height="4" rx="1" fill="currentColor" stroke="none" opacity="0.2"/></svg>`,
+  kelp: `<svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M8 35 Q4 26 10 18 Q5 10 11 3"/><path d="M18 35 Q22 25 16 16 Q21 8 15 1"/><path d="M28 35 Q24 26 30 18 Q25 10 31 3"/></svg>`,
+  flood:`<svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="12" width="18" height="14" rx="1"/><path d="M7 12 L18 4 L29 12"/><path d="M2 30 Q7 24 12 30 Q17 36 22 30 Q27 24 34 30"/></svg>`,
+  fire: `<svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 34 Q6 26 10 17 Q14 9 12 3 Q20 11 18 20 Q26 11 24 3 Q32 13 28 23 Q33 19 31 27 Q29 34 18 34"/></svg>`,
+};
+
+const LEVEL_COLORS = ['','#2a8c6e','#e8a030','#d9593a','#7a1020'];
+
+function chartConsequences(scenario) {
+  const container = document.getElementById('consequence-grid');
+  if (!container) return;
+  const items = CONSEQ_DATA[scenario] || CONSEQ_DATA.ssp585;
+  container.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'conseq-grid';
+
+  items.forEach(item => {
+    const col = LEVEL_COLORS[item.level];
+    const dots = [1,2,3,4].map(l =>
+      `<span class="sev-dot${l <= item.level ? ' on' : ''}" style="${l <= item.level ? `background:${col}` : ''}"></span>`
+    ).join('');
+    const card = document.createElement('div');
+    card.className = 'conseq-card';
+    card.style.borderColor = col + '55';
+    card.innerHTML = `
+      <div class="conseq-icon" style="color:${col}">${ICONS[item.id]}</div>
+      <div class="conseq-body">
+        <div class="conseq-header">
+          <span class="conseq-title">${item.title}</span>
+          <span class="conseq-level-badge" style="color:${col};border-color:${col}66;background:${col}12">${item.label}</span>
+        </div>
+        <div class="conseq-severity">${dots}</div>
+        <p class="conseq-desc">${item.desc}</p>
+      </div>`;
+    grid.appendChild(card);
+  });
+  container.appendChild(grid);
+}
+
+/* ── Page 6: Temperature anomaly heatmap ────────────────────────── */
+function chartTempAnomalyHeatmap(sspData) {
+  const container = document.getElementById('chart-anomaly-heatmap');
+  if (!container || !sspData) return;
+  container.innerHTML = '';
+
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const SSPS = [
+    { key:'ssp126', label:'Clean Future',   color:'#2a8c6e', warming:'+~1.8°C avg' },
+    { key:'ssp245', label:'Middle Road',    color:'#e8a030', warming:'+~2.7°C avg' },
+    { key:'ssp370', label:'High Emissions', color:'#d9593a', warming:'+~3.6°C avg' },
+    { key:'ssp585', label:'Fossil Future',  color:'#7a1020', warming:'+~4.4°C avg' },
+  ];
+  const isTempF = tempUnit === 'F';
+
+  const present = sspData.filter(d => d.scenario.startsWith('present'));
+  const pByM = new Map(present.map(d => [d.month, d.temp_c]));
+
+  // delta[monthIndex][scenarioIndex]
+  const deltas = MONTHS.map((_, mi) => SSPS.map(s => {
+    const row = sspData.find(d => d.scenario.startsWith(s.key) && d.month === mi + 1);
+    const raw = row ? row.temp_c - pByM.get(mi + 1) : 0;
+    return isTempF ? raw * 9 / 5 : raw;
+  }));
+
+  const allD = deltas.flat();
+  const maxD = d3.max(allD);
+  const colorScale = d3.scaleSequential([0, maxD], d3.interpolateRgb('#fff4ee', '#7a1020'));
+
+  const W = 900;
+  const labelW = 52, rightPad = 12;
+  const cellW = Math.floor((W - labelW - rightPad) / 4);
+  const cellH = 34, topH = 58;
+  const H = topH + 12 * cellH + 28;
+
+  const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const tooltip = d3.select('.tooltip');
+
+  // Column headers
+  SSPS.forEach((s, si) => {
+    const cx = labelW + si * cellW + cellW / 2;
+    svg.append('rect')
+      .attr('x', labelW + si * cellW + 3).attr('y', 4)
+      .attr('width', cellW - 6).attr('height', topH - 8).attr('rx', 7)
+      .attr('fill', s.color + '15').attr('stroke', s.color + '60').attr('stroke-width', 1.5);
+    svg.append('text').attr('x', cx).attr('y', 22).attr('text-anchor', 'middle')
+      .attr('font-size', 11.5).attr('font-weight', '700').attr('fill', s.color).text(s.label);
+    svg.append('text').attr('x', cx).attr('y', 38).attr('text-anchor', 'middle')
+      .attr('font-size', 9.5).attr('fill', s.color).attr('opacity', 0.8).text(s.warming);
+  });
+
+  // Month rows
+  MONTHS.forEach((mon, mi) => {
+    const rowY = topH + mi * cellH;
+    svg.append('text').attr('x', labelW - 6).attr('y', rowY + cellH / 2)
+      .attr('text-anchor', 'end').attr('dy', '0.35em')
+      .attr('font-size', 11).attr('font-weight', '500').attr('fill', 'var(--muted)').text(mon);
+
+    SSPS.forEach((s, si) => {
+      const delta = deltas[mi][si];
+      const cx = labelW + si * cellW;
+      const fill = colorScale(delta);
+      const darkCell = delta > maxD * 0.55;
+
+      svg.append('rect')
+        .attr('x', cx + 3).attr('y', rowY + 3)
+        .attr('width', cellW - 6).attr('height', cellH - 6).attr('rx', 5)
+        .attr('fill', fill).style('cursor', 'default')
+        .on('mouseover', function(event) {
+          tooltip.style('opacity', 1).html(
+            `<strong>${mon} · ${s.label}</strong><br>+${delta.toFixed(2)}${isTempF ? '°F' : '°C'} warmer than today`
+          );
+        })
+        .on('mousemove', e => tooltip.style('left', (e.clientX + 14) + 'px').style('top', (e.clientY - 36) + 'px'))
+        .on('mouseout', () => tooltip.style('opacity', 0));
+
+      svg.append('text')
+        .attr('x', cx + cellW / 2).attr('y', rowY + cellH / 2).attr('dy', '0.35em')
+        .attr('text-anchor', 'middle').attr('font-size', 11).attr('font-weight', '600')
+        .attr('fill', darkCell ? '#fff' : '#1c2b3a')
+        .text(`+${delta.toFixed(1)}${isTempF ? '°F' : '°C'}`);
+    });
+  });
+
+  // Color gradient legend
+  const legX = labelW, legW = 4 * cellW - 6, legY = H - 16;
+  const gradId = 'heatmap-grad';
+  const grad = svg.append('defs').append('linearGradient').attr('id', gradId).attr('x1', '0%').attr('x2', '100%');
+  grad.append('stop').attr('offset', '0%').attr('stop-color', '#fff4ee');
+  grad.append('stop').attr('offset', '100%').attr('stop-color', '#7a1020');
+  svg.append('rect').attr('x', legX).attr('y', legY - 6).attr('width', legW).attr('height', 5).attr('rx', 2).attr('fill', `url(#${gradId})`);
+  svg.append('text').attr('x', legX).attr('y', legY - 9).attr('font-size', 9).attr('fill', 'var(--muted)').text('Less warming →');
+  svg.append('text').attr('x', legX + legW).attr('y', legY - 9).attr('text-anchor', 'end').attr('font-size', 9).attr('fill', '#7a1020').attr('font-weight', '600').text('← More warming');
+}
+
+/* ── Page 6: Sea level rise chart ────────────────────────────────── */
+let seaLevelRendered = false;
+async function chartSeaLevel() {
+  if (seaLevelRendered) return;
+  const container = document.getElementById('chart-sea-level');
+  if (!container) return;
+
+  const hist = await d3.csv('data/annual_sea_level.csv', d3.autoType).catch(() => null);
+  if (!hist) return;
+  seaLevelRendered = true;
+  container.innerHTML = '';
+
+  // Normalize so 1995-2014 mean = 0 (match IPCC baseline)
+  const baseline = d3.mean(hist.filter(d => d.year >= 1995 && d.year <= 2014), d => d.zos_anomaly_mm);
+  const histNorm = hist.map(d => ({ year: d.year, val: d.zos_anomaly_mm - baseline }));
+
+  // IPCC AR6 median projections above 1995-2014 baseline (mm)
+  const projections = [
+    { key:'ssp126', color:'#2a8c6e', label:'Clean Future',   rise: 320 },
+    { key:'ssp245', color:'#e8a030', label:'Middle Road',    rise: 440 },
+    { key:'ssp370', color:'#d9593a', label:'High Emissions', rise: 630 },
+    { key:'ssp585', color:'#7a1020', label:'Fossil Future',  rise: 900 },
+  ];
+
+  const W = 900, H = 260;
+  const xLeft = 58, xRight = W - 80, top = 24, bot = 218;
+  const xDomain = [1925, 2100];
+  const allVals = histNorm.map(d => d.val).concat(projections.map(p => p.rise));
+  const yPad = 40;
+
+  const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const x = d3.scaleLinear().domain(xDomain).range([xLeft, xRight]);
+  const y = d3.scaleLinear().domain([d3.min(allVals) - yPad, d3.max(allVals) + yPad]).range([bot, top]).nice();
+  const lineGen = d3.line().x(d => x(d.year)).y(d => y(d.val)).curve(d3.curveCatmullRom);
+
+  svg.append('g').attr('class','grid').attr('transform',`translate(${xLeft},0)`)
+    .call(d3.axisLeft(y).tickSize(-(xRight-xLeft)).tickFormat('').ticks(5)).lower();
+  svg.append('g').attr('class','axis').attr('transform',`translate(${xLeft},0)`)
+    .call(d3.axisLeft(y).ticks(5).tickFormat(d => `${d>0?'+':''}${d}mm`))
+    .append('text').attr('class','axis-label').attr('transform','rotate(-90)')
+    .attr('x',-(bot-top)/2-top).attr('y',-50).attr('fill','currentColor').attr('text-anchor','middle')
+    .text('Sea level anomaly (mm)');
+  svg.append('g').attr('class','axis').attr('transform',`translate(0,${bot})`)
+    .call(d3.axisBottom(x).tickFormat(d3.format('d')).tickValues([1925,1950,1975,2000,2025,2050,2075,2100]));
+
+  // Zero line
+  svg.append('line').attr('x1',xLeft).attr('x2',xRight).attr('y1',y(0)).attr('y2',y(0))
+    .attr('stroke','var(--grid)').attr('stroke-width',1.5).attr('stroke-dasharray','4,3');
+
+  // Historical solid line
+  svg.append('path').datum(histNorm).attr('fill','none')
+    .attr('stroke','var(--ink)').attr('stroke-width',2).attr('d',lineGen);
+
+  const lastHist = histNorm[histNorm.length - 1];
+
+  // Projected dashed lines from 2014 endpoint to 2100
+  projections.forEach((p, pi) => {
+    const projLine = d3.line().x(d => x(d.year)).y(d => y(d.val));
+    const pts = [{ year: lastHist.year, val: lastHist.val }, { year: 2100, val: p.rise }];
+    const path = svg.append('path').datum(pts)
+      .attr('fill','none').attr('stroke', p.color).attr('stroke-width', 2)
+      .attr('stroke-dasharray','6,4').attr('d', projLine);
+    const len = path.node().getTotalLength();
+    path.attr('stroke-dashoffset', len)
+      .transition().delay(pi * 200).duration(900).ease(d3.easeLinear).attr('stroke-dashoffset', 0);
+
+    // Endpoint dot + label
+    svg.append('circle').attr('cx', x(2100)).attr('cy', y(p.rise)).attr('r', 5)
+      .attr('fill', p.color).attr('opacity', 0)
+      .transition().delay(pi * 200 + 900).duration(200).attr('opacity', 1);
+    svg.append('text').attr('x', x(2100) + 8).attr('y', y(p.rise)).attr('dy','0.35em')
+      .attr('font-size', 10).attr('fill', p.color).attr('font-weight','600')
+      .attr('opacity', 0).text(`${p.label} (+${p.rise}mm)`)
+      .transition().delay(pi * 200 + 1000).duration(200).attr('opacity', 1);
+  });
+
+  // "Historical" and "Projected" area labels
+  svg.append('text').attr('x', x(1970)).attr('y', top + 12)
+    .attr('font-size', 10).attr('fill','var(--muted)').attr('text-anchor','middle').text('Historical (model)');
+  svg.append('text').attr('x', x(2060)).attr('y', top + 12)
+    .attr('font-size', 10).attr('fill','var(--muted)').attr('text-anchor','middle').text('Projected (IPCC AR6)');
+  svg.append('line').attr('x1', x(2014)).attr('x2', x(2014)).attr('y1', top + 4).attr('y2', bot)
+    .attr('stroke','var(--grid)').attr('stroke-width',1).attr('stroke-dasharray','3,3');
+}
+
+/* ── Page 6: All scenarios temperature comparison ───────────────── */
+function chartAllScenarios(sspData) {
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const container = document.getElementById('chart-all-scenarios');
+  if (!container || !sspData) return;
+  container.innerHTML = '';
+
+  const present = sspData.filter(d => d.scenario.startsWith('present'));
+  const SSPS = [
+    { key: 'ssp126', color: '#2a8c6e', label: 'SSP 1-2.6' },
+    { key: 'ssp245', color: '#e8a030', label: 'SSP 2-4.5' },
+    { key: 'ssp370', color: '#d9593a', label: 'SSP 3-7.0' },
+    { key: 'ssp585', color: '#7a1020', label: 'SSP 5-8.5' },
+  ];
+
+  const isTempF = tempUnit === 'F';
+  const toD = v => v != null ? (isTempF ? v * 9 / 5 + 32 : v) : null;
+  const yLabel = isTempF ? 'Temperature (°F)' : 'Temperature (°C)';
+
+  const pByM = new Map(present.map(d => [d.month, toD(d.temp_c)]));
+  const allVals = [...present.map(d => toD(d.temp_c))];
+  SSPS.forEach(s => {
+    sspData.filter(d => d.scenario.startsWith(s.key)).forEach(d => allVals.push(toD(d.temp_c)));
+  });
+
+  const W = 900, H = 300;
+  const xLeft = 58, xRight = W - 48, top = 24, bot = 248;
+  const curve = d3.curveCatmullRom.alpha(0.5);
+
+  const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const x = d3.scalePoint().domain(d3.range(1, 13)).range([xLeft, xRight]).padding(0.3);
+  const pad = (d3.max(allVals) - d3.min(allVals)) * 0.12;
+  const y = d3.scaleLinear().domain([d3.min(allVals) - pad, d3.max(allVals) + pad]).range([bot, top]).nice();
+  const lineGen = d3.line().x((_, i) => x(i + 1)).y(d => y(d)).defined(d => d != null).curve(curve);
+
+  svg.append('g').attr('class', 'grid').attr('transform', `translate(${xLeft},0)`)
+    .call(d3.axisLeft(y).tickSize(-(xRight - xLeft)).tickFormat('').ticks(5)).lower();
+  svg.append('g').attr('class', 'axis').attr('transform', `translate(${xLeft},0)`)
+    .call(d3.axisLeft(y).ticks(5))
+    .append('text').attr('class', 'axis-label').attr('transform', 'rotate(-90)')
+    .attr('x', -(bot - top) / 2 - top).attr('y', -44).attr('fill', 'currentColor').attr('text-anchor', 'middle').text(yLabel);
+  svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${bot})`)
+    .call(d3.axisBottom(x).tickFormat(i => MONTHS[i - 1]));
+
+  // Today — dashed
+  svg.append('path').datum(d3.range(1, 13).map(m => pByM.get(m)))
+    .attr('fill', 'none').attr('stroke', '#9bb3c9').attr('stroke-width', 1.5)
+    .attr('stroke-dasharray', '5,4').attr('pointer-events', 'none').attr('d', lineGen);
+
+  // Each future scenario — animated draw
+  SSPS.forEach((s, si) => {
+    const byM = new Map(sspData.filter(d => d.scenario.startsWith(s.key)).map(d => [d.month, toD(d.temp_c)]));
+    const path = svg.append('path').datum(d3.range(1, 13).map(m => byM.get(m)))
+      .attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 2.2).attr('stroke-linejoin', 'round')
+      .attr('pointer-events', 'none').attr('d', lineGen);
+    const len = path.node().getTotalLength();
+    path.attr('stroke-dasharray', len).attr('stroke-dashoffset', len)
+      .transition().delay(si * 180).duration(800).ease(d3.easeLinear).attr('stroke-dashoffset', 0);
+  });
+}
+
+/* ── Page 6: Extreme weather risk chart ─────────────────────────── */
+function chartExtremeRisk(sspData) {
+  const container = document.getElementById('chart-extreme-risk');
+  if (!container || !sspData) return;
+  container.innerHTML = '';
+
+  const SCENARIOS = [
+    { key: 'present', label: 'Today',         color: '#9bb3c9' },
+    { key: 'ssp126',  label: 'Clean Future',   color: '#2a8c6e' },
+    { key: 'ssp245',  label: 'Middle Road',    color: '#e8a030' },
+    { key: 'ssp370',  label: 'High Emissions', color: '#d9593a' },
+    { key: 'ssp585',  label: 'Fossil Future',  color: '#7a1020' },
+  ];
+  const RISKS = [
+    { key: 'fire',  label: 'Fire danger months', test: d => d.temp_c > 27 && d.precip_mm < 5 },
+    { key: 'heat',  label: 'Extreme heat months', test: d => d.temp_c > 30 },
+    { key: 'flood', label: 'Heavy rain months',   test: d => d.precip_mm > 80 },
+  ];
+
+  const data = SCENARIOS.map(s => {
+    const months = sspData.filter(d => d.scenario.startsWith(s.key));
+    const counts = {};
+    RISKS.forEach(r => { counts[r.key] = months.filter(r.test).length; });
+    return { ...s, ...counts };
+  });
+
+  const W = 900, H = 260;
+  const xLeft = 160, xRight = W - 40, top = 20, bot = 220;
+  const nScen = SCENARIOS.length;
+  const nRisk = RISKS.length;
+  const groupH = (bot - top) / nRisk;
+  const barH = Math.min(22, groupH * 0.38);
+  const barGap = barH * 0.35;
+  const maxVal = d3.max(data, d => Math.max(d.fire, d.heat, d.flood));
+
+  const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const x = d3.scaleLinear().domain([0, Math.max(maxVal + 1, 4)]).range([xLeft, xRight]);
+
+  // Gridlines
+  svg.append('g').attr('class', 'grid').attr('transform', `translate(0,${bot})`)
+    .call(d3.axisBottom(x).ticks(5).tickSize(-(bot - top)).tickFormat('')).lower();
+  svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${bot})`)
+    .call(d3.axisBottom(x).ticks(5).tickFormat(d => `${d} mo`));
+
+  const tooltip = d3.select('.tooltip');
+
+  RISKS.forEach((risk, ri) => {
+    const gy = top + ri * groupH + groupH / 2 - (nScen * (barH + barGap)) / 2;
+    svg.append('text').attr('x', xLeft - 8).attr('y', gy + (nScen * (barH + barGap)) / 2)
+      .attr('text-anchor', 'end').attr('dy', '0.35em')
+      .attr('font-size', 11).attr('fill', 'var(--muted)').attr('font-weight', '600')
+      .text(risk.label);
+
+    data.forEach((scen, si) => {
+      const barY = gy + si * (barH + barGap);
+      const val = scen[risk.key];
+      const bar = svg.append('rect')
+        .attr('x', xLeft).attr('y', barY)
+        .attr('width', 0).attr('height', barH).attr('rx', 3).attr('fill', scen.color)
+        .style('cursor', 'pointer')
+        .on('mouseover', function(event) {
+          tooltip.style('opacity', 1).html(
+            `<strong>${scen.label}</strong><br>${risk.label}: <strong>${val}</strong> month${val !== 1 ? 's' : ''}/yr`
+          );
+        })
+        .on('mousemove', e => tooltip.style('left', (e.clientX + 14) + 'px').style('top', (e.clientY - 36) + 'px'))
+        .on('mouseout', () => tooltip.style('opacity', 0));
+
+      bar.transition().delay(ri * 120 + si * 60).duration(600).ease(d3.easeCubicOut)
+        .attr('width', x(val) - xLeft);
+
+      if (val > 0) {
+        svg.append('text').attr('x', x(val) + 4).attr('y', barY + barH / 2).attr('dy', '0.35em')
+          .attr('font-size', 10).attr('fill', 'var(--muted)').attr('opacity', 0).text(val)
+          .transition().delay(ri * 120 + si * 60 + 600).duration(200).attr('opacity', 1);
+      }
+    });
+  });
+
+  // Scenario color legend on right
+  const legX = xRight + 10, legY = top + 8;
+  SCENARIOS.forEach((s, i) => {
+    svg.append('rect').attr('x', legX - 64).attr('y', legY + i * 18).attr('width', 10).attr('height', 10).attr('rx', 2).attr('fill', s.color);
+    svg.append('text').attr('x', legX - 50).attr('y', legY + i * 18 + 5).attr('dy', '0.35em')
+      .attr('font-size', 9.5).attr('fill', 'var(--muted)').text(s.label);
+  });
 }
 
 async function init() {
@@ -1274,6 +1848,8 @@ async function init() {
   if (meta) {
     d3.select("#meta-source").text(meta.source);
   }
+
+  globalSspData = sspData;
 
   chartSeasonalCurve(monthlyClimatology);
   if (cloudData) chartCloudCurve(cloudData);

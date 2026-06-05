@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>San Diego Climate, 1925–now–2100</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css" />
     <script src="https://d3js.org/d3.v7.min.js"></script>
   </head>
@@ -14,50 +17,56 @@
     <!-- ── Step nav ──────────────────────────────────────────────────── -->
     <nav class="step-nav">
       <div class="step-list">
-        <div class="step active" data-page="1">
-          <span class="step-dot">1</span>
-          <span class="step-label">Your Preferences</span>
-        </div>
+        <div class="step active" data-page="1"><span class="step-dot">1</span><span class="step-label">Intro</span></div>
         <div class="step-connector"></div>
-        <div class="step" data-page="2">
-          <span class="step-dot">2</span>
-          <span class="step-label">Today's Climate</span>
-        </div>
+        <div class="step" data-page="2"><span class="step-dot">2</span><span class="step-label">Preferences</span></div>
         <div class="step-connector"></div>
-        <div class="step" data-page="3">
-          <span class="step-dot">3</span>
-          <span class="step-label">Future Scenarios</span>
-        </div>
+        <div class="step" data-page="3"><span class="step-dot">3</span><span class="step-label">Today</span></div>
+        <div class="step-connector"></div>
+        <div class="step" data-page="4"><span class="step-dot">4</span><span class="step-label">Scenarios</span></div>
+        <div class="step-connector"></div>
+        <div class="step" data-page="5"><span class="step-dot">5</span><span class="step-label">Your Future</span></div>
+        <div class="step-connector"></div>
+        <div class="step" data-page="6"><span class="step-dot">6</span><span class="step-label">Big Picture</span></div>
       </div>
     </nav>
 
     <div class="page-container">
 
-    <!-- ════════════════════════════════════════════════════════════════
-         PAGE 1 — Preferences
-    ═════════════════════════════════════════════════════════════════ -->
+    <!-- ════════════ PAGE 1 — Intro / Title ════════════ -->
     <div class="page active" id="page-1">
       <div class="page-inner">
-
         <div class="welcome-hero">
-          <h1>San Diego Climate, 1925–now–2100</h1>
+          <h1>San Diego's<br>Seasonal Climate</h1>
+          <p class="hero-dateline">1925 &nbsp;&middot;&nbsp; now &nbsp;&middot;&nbsp; 2100</p>
           <ul class="welcome-tagline">
             <li>The climate has been stable for generations.</li>
-            <li>What we hand to the next one depends on choices being made right now.</li>
+            <li>What we hand to the next generation depends on the choices being made right now.</li>
             <li>Explore the history and four possible futures.</li>
           </ul>
         </div>
+        <div class="page-cta-row">
+          <button class="page-cta" id="btn-next-1">Set your weather preferences →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ PAGE 2 — Preferences ════════════ -->
+    <div class="page" id="page-2">
+      <div class="page-inner">
+
+        <div class="page-2-hero">
+          <h2 class="page-2-title">What kind of weather do you enjoy?</h2>
+          <p class="page-2-tagline">Your preferences shape personalized activity recommendations throughout the experience.</p>
+        </div>
 
         <div class="chart-card pref-setup-card">
-          <div class="pref-card-header">
-            <h2>What kind of weather do you enjoy?</h2>
+          <div class="pref-card-top">
             <button class="unit-toggle" id="unit-toggle">Switch to °F</button>
           </div>
-          <p class="subtitle">These preferences shape your personalized activity recommendations on every page.</p>
-
           <div class="weather-illustration">
             <svg id="weather-svg" viewBox="0 0 420 190" xmlns="http://www.w3.org/2000/svg">
-              <rect id="sky-rect" x="0" y="0" width="420" height="190" rx="10" fill="rgb(185,225,255)"/>
+              <rect id="sky-rect" x="0" y="0" width="420" height="190" rx="10" fill="rgb(245,245,255)"/>
               <rect x="0" y="155" width="420" height="35" fill="#8dc97d"/>
               <rect x="0" y="151" width="420" height="8" fill="#6bbc5c"/>
               <g id="illus-sun" opacity="0">
@@ -72,21 +81,17 @@
                 <circle cx="355" cy="44" r="22" fill="#f9d531"/>
               </g>
               <g id="illus-clouds" opacity="0.85">
-                <!-- Main cloud cluster top-right -->
                 <ellipse cx="342" cy="35" rx="48" ry="24" fill="white" opacity="0.95"/>
                 <ellipse cx="378" cy="42" rx="36" ry="20" fill="white" opacity="0.92"/>
                 <ellipse cx="312" cy="44" rx="34" ry="18" fill="#e8e8e8" opacity="0.88"/>
                 <ellipse cx="358" cy="22" rx="26" ry="16" fill="white" opacity="0.9"/>
-                <!-- Mid cloud center-left -->
                 <ellipse cx="130" cy="40" rx="38" ry="18" fill="white" opacity="0.78"/>
                 <ellipse cx="158" cy="34" rx="26" ry="15" fill="white" opacity="0.82"/>
                 <ellipse cx="108" cy="48" rx="24" ry="13" fill="#dce8f0" opacity="0.75"/>
-                <!-- Small cloud far left -->
                 <ellipse cx="46" cy="52" rx="28" ry="13" fill="white" opacity="0.68"/>
                 <ellipse cx="66" cy="44" rx="20" ry="12" fill="white" opacity="0.72"/>
               </g>
               <g id="illus-rain" opacity="0">
-                <!-- Row 1 -->
                 <line x1="38"  y1="62" x2="31"  y2="84"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
                 <line x1="62"  y1="52" x2="55"  y2="74"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
                 <line x1="86"  y1="66" x2="79"  y2="88"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
@@ -97,7 +102,6 @@
                 <line x1="252" y1="64" x2="245" y2="86"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
                 <line x1="276" y1="50" x2="269" y2="72"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
                 <line x1="300" y1="62" x2="293" y2="84"  stroke="#4a90a4" stroke-width="2.5" stroke-linecap="round"/>
-                <!-- Row 2 (offset, slightly lighter) -->
                 <line x1="50"  y1="88" x2="43"  y2="110" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
                 <line x1="74"  y1="78" x2="67"  y2="100" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
                 <line x1="98"  y1="90" x2="91"  y2="112" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
@@ -107,7 +111,6 @@
                 <line x1="264" y1="90" x2="257" y2="112" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
                 <line x1="288" y1="78" x2="281" y2="100" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
                 <line x1="312" y1="88" x2="305" y2="110" stroke="#5fa3b8" stroke-width="2" stroke-linecap="round"/>
-                <!-- Row 3 (faint, near ground) -->
                 <line x1="56"  y1="112" x2="50" y2="130" stroke="#78b8cc" stroke-width="1.5" stroke-linecap="round"/>
                 <line x1="104" y1="116" x2="98" y2="134" stroke="#78b8cc" stroke-width="1.5" stroke-linecap="round"/>
                 <line x1="152" y1="112" x2="146" y2="130" stroke="#78b8cc" stroke-width="1.5" stroke-linecap="round"/>
@@ -116,13 +119,10 @@
               </g>
               <rect id="heat-overlay" x="0" y="0" width="420" height="190" rx="10" fill="#ff3322" opacity="0" pointer-events="none"/>
               <g id="illus-person">
-                <!-- invisible hitbox -->
                 <rect x="165" y="58" width="60" height="100" fill="transparent" stroke="none"/>
                 <circle cx="195" cy="80" r="16" fill="none" stroke="#1a2332" stroke-width="2.5"/>
-                <!-- Eyes -->
                 <circle cx="190" cy="77" r="2.2" fill="#1a2332"/>
                 <circle cx="200" cy="77" r="2.2" fill="#1a2332"/>
-                <!-- Smile -->
                 <path d="M 188 87 Q 195 93 202 87" fill="none" stroke="#1a2332" stroke-width="1.8" stroke-linecap="round"/>
                 <line x1="195" y1="96" x2="195" y2="132" stroke="#1a2332" stroke-width="2.5"/>
                 <line x1="195" y1="108" x2="172" y2="98" stroke="#1a2332" stroke-width="2.5"/>
@@ -163,31 +163,32 @@
           </div>
         </div>
 
-        <div class="page-cta-row">
-          <button class="page-cta" id="btn-next-1">Explore San Diego's climate →</button>
+        <div class="page-nav-row">
+          <button class="page-back" id="btn-back-2">← Back</button>
+          <button class="page-cta" id="btn-next-2">Explore San Diego's climate →</button>
         </div>
-
       </div>
     </div>
 
-    <!-- ════════════════════════════════════════════════════════════════
-         PAGE 2 — Historic climate
-    ═════════════════════════════════════════════════════════════════ -->
-    <div class="page" id="page-2">
+    <!-- ════════════ PAGE 3 — Today's Climate ════════════ -->
+    <div class="page" id="page-3">
       <div class="page-inner">
 
-        <!-- Activity recommendation (personalized by page-1 prefs) -->
-        <section class="chart-card">
-          <h2>Your Monthly Activity Recommendations</h2>
-          <p class="subtitle">
-            Two time windows, your preferences applied to both.
-            The near-identical results say it all: San Diego's liveable climate has barely budged in 90 years.
-            <span id="cloud-note" style="color:var(--muted);font-style:italic"></span>
-          </p>
+        <div class="page-2-hero">
+          <h2 class="page-2-title">San Diego's Climate, 1925–2014</h2>
+        </div>
+
+        <section class="chart-card rec-card">
+          <div class="rec-card-header">
+            <div>
+              <h2>Your Activity Calendar</h2>
+              <p class="subtitle">Based on your preferences, here's how each month rates for outdoor activities across two eras.<span id="cloud-note" style="color:var(--muted);font-style:italic;margin-left:.4rem"></span></p>
+            </div>
+            <div class="rec-pref-summary" id="rec-pref-summary"></div>
+          </div>
           <div id="chart-visit-rec"></div>
         </section>
 
-        <!-- Toggled hero chart -->
         <section class="chart-card hero-card chart-toggled-card">
           <div class="chart-tab-bar">
             <button class="chart-tab-btn active" data-tab="temp">Temperature</button>
@@ -195,7 +196,6 @@
             <button class="chart-tab-btn" data-tab="cloud">Cloud Cover</button>
           </div>
 
-          <!-- Temperature pane -->
           <div class="chart-tab-pane active" data-tab="temp">
             <h2>San Diego's Monthly Temperature, 1925–2014</h2>
             <p class="subtitle">
@@ -231,7 +231,6 @@
             </div>
           </div>
 
-          <!-- Precipitation pane -->
           <div class="chart-tab-pane" data-tab="precip">
             <h2>San Diego's Monthly Precipitation, 1925–2014</h2>
             <p class="subtitle">
@@ -260,7 +259,6 @@
             </div>
           </div>
 
-          <!-- Cloud cover pane -->
           <div class="chart-tab-pane" data-tab="cloud">
             <h2>San Diego's Monthly Cloud Cover, 1925–2014</h2>
             <p class="subtitle">
@@ -289,74 +287,33 @@
               </div>
             </div>
           </div>
-
         </section>
 
-        <!-- Narrative (below the visual) -->
         <div class="chart-card climate-narrative">
           <h2>Ninety Years of Familiar Weather</h2>
-          <p>
-            San Diego's climate has been defined by consistency. The same mild winters, dry summers, and coastal marine layer you see in 1925 appear again in 2014. That stability is real.
-          </p>
-          <p>
-            But a quiet signal persists. <strong>13 of the 15 years since 2000 ran warmer than the mid-century average,</strong> and the recent decade sits about 0.34°C above the 90-year mean: small, but steady.
-          </p>
-          <p style="margin-bottom:0">
-            Precipitation tells a wilder story. San Diego's rainfall is defined by its extremes. In 1959, the city received 766 mm of rain. The very next year: 222 mm. A 544 mm swing in twelve months. Twenty-five of the 90 years topped 400 mm; only three fell below 150 mm. <strong>The "average" San Diego year is actually rare,</strong> and climate projections suggest the swings intensify as warming accelerates.
-          </p>
+          <ul class="narrative-bullets">
+            <li>San Diego's climate has been defined by consistency. The same mild winters, dry summers, and coastal marine layer you see in 1925 appear again in 2014.</li>
+            <li>But a quiet signal persists. <strong>13 of the 15 years since 2000 ran warmer than the mid-century average,</strong> and the recent decade sits about 0.34°C above the 90-year mean: small, but steady.</li>
+            <li>Precipitation tells a wilder story. In 1959, the city received 766 mm of rain. The very next year: 222 mm. A 544 mm swing in twelve months. <strong>The "average" San Diego year is actually rare,</strong> and projections suggest the swings intensify as warming accelerates.</li>
+          </ul>
         </div>
 
         <div class="page-nav-row">
-          <button class="page-back" id="btn-back-2">← Back</button>
-          <button class="page-cta" id="btn-next-2">See the future for your great-grandchildren →</button>
+          <button class="page-back" id="btn-back-3">← Back</button>
+          <button class="page-cta" id="btn-next-3">Choose a future scenario →</button>
         </div>
-
       </div>
     </div>
 
-    <!-- ════════════════════════════════════════════════════════════════
-         PAGE 3 — Future scenarios
-    ═════════════════════════════════════════════════════════════════ -->
-    <div class="page" id="page-3">
+    <!-- ════════════ PAGE 4 — Choose Scenario ════════════ -->
+    <div class="page" id="page-4">
       <div class="page-inner">
 
         <div class="future-hero">
-          <h2 class="future-title">What could San Diego look like in 2100?</h2>
-          <p class="future-tagline">
-            By 2100, your great-grandchildren will inherit the climate we leave behind.
-            Choose a scenario to see how San Diego's seasons and the activities that define life here might shift.
-          </p>
+          <h2 class="future-title">Choose a future for your great-grandchildren</h2>
+          <p class="future-tagline">By 2100, the climate San Diego's next generations inherit will be shaped by decisions made today. Each scenario below reflects a different path the world could take.</p>
         </div>
 
-        <!-- Scenario selector -->
-        <div class="chart-card scenario-selector">
-          <h2>Choose a future scenario</h2>
-          <p class="subtitle">Each reflects a different level of global climate action.</p>
-          <div class="scenario-btns">
-            <button class="scenario-btn" data-ssp="ssp126">
-              <span class="ssp-badge ssp126">SSP 1-2.6</span>
-              <span class="ssp-name">Clean Future</span>
-              <span class="ssp-desc">Strong global action. ~1.8°C above pre-industrial by 2100.</span>
-            </button>
-            <button class="scenario-btn" data-ssp="ssp245">
-              <span class="ssp-badge ssp245">SSP 2-4.5</span>
-              <span class="ssp-name">Middle Road</span>
-              <span class="ssp-desc">Moderate action. ~2.7°C above pre-industrial by 2100.</span>
-            </button>
-            <button class="scenario-btn" data-ssp="ssp370">
-              <span class="ssp-badge ssp370">SSP 3-7.0</span>
-              <span class="ssp-name">High Emissions</span>
-              <span class="ssp-desc">Limited action. ~3.6°C above pre-industrial by 2100.</span>
-            </button>
-            <button class="scenario-btn active" data-ssp="ssp585">
-              <span class="ssp-badge ssp585">SSP 5-8.5</span>
-              <span class="ssp-name">Fossil Future</span>
-              <span class="ssp-desc">Business as usual. ~4.4°C above pre-industrial by 2100.</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Generation timeline -->
         <div class="generation-banner">
           <div class="gen-item gen-you">
             <span class="gen-year">2025</span>
@@ -379,16 +336,91 @@
           </div>
         </div>
 
-        <!-- Future activity recommendation -->
+        <div class="chart-card scenario-selector">
+          <h2>Which path does the world take?</h2>
+          <div class="scenario-cards-v">
+
+            <button class="scenario-card-v" data-ssp="ssp126">
+              <div class="scv-indicator" style="background:#2a8c6e"></div>
+              <div class="scv-content">
+                <div class="scv-header">
+                  <div class="scv-title-row">
+                    <span class="ssp-badge ssp126">SSP 1-2.6</span>
+                    <span class="scv-name">Clean Future</span>
+                  </div>
+                  <span class="scv-temp-badge">+~1.8°C by 2100</span>
+                </div>
+                <p class="scv-lead">The world acts decisively. Renewables dominate by mid-century and emissions reach net-zero shortly after.</p>
+              </div>
+            </button>
+
+            <button class="scenario-card-v" data-ssp="ssp245">
+              <div class="scv-indicator" style="background:#e8a030"></div>
+              <div class="scv-content">
+                <div class="scv-header">
+                  <div class="scv-title-row">
+                    <span class="ssp-badge ssp245">SSP 2-4.5</span>
+                    <span class="scv-name">Middle Road</span>
+                  </div>
+                  <span class="scv-temp-badge">+~2.7°C by 2100</span>
+                </div>
+                <p class="scv-lead">Some action, but not enough. Fossil fuels linger alongside a slow green transition through mid-century.</p>
+              </div>
+            </button>
+
+            <button class="scenario-card-v" data-ssp="ssp370">
+              <div class="scv-indicator" style="background:#d9593a"></div>
+              <div class="scv-content">
+                <div class="scv-header">
+                  <div class="scv-title-row">
+                    <span class="ssp-badge ssp370">SSP 3-7.0</span>
+                    <span class="scv-name">High Emissions</span>
+                  </div>
+                  <span class="scv-temp-badge">+~3.6°C by 2100</span>
+                </div>
+                <p class="scv-lead">Climate policy stalls. Emissions stay high through mid-century before declining too slowly and too late.</p>
+              </div>
+            </button>
+
+            <button class="scenario-card-v" data-ssp="ssp585">
+              <div class="scv-indicator" style="background:#7a1020"></div>
+              <div class="scv-content">
+                <div class="scv-header">
+                  <div class="scv-title-row">
+                    <span class="ssp-badge ssp585">SSP 5-8.5</span>
+                    <span class="scv-name">Fossil Future</span>
+                  </div>
+                  <span class="scv-temp-badge">+~4.4°C by 2100</span>
+                </div>
+                <p class="scv-lead">Business as usual. No meaningful climate policy and fossil fuel use expands unchecked through 2100.</p>
+              </div>
+            </button>
+
+          </div>
+        </div>
+
+        <div class="page-nav-row">
+          <button class="page-back" id="btn-back-4">← Back</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ PAGE 5 — Your Future ════════════ -->
+    <div class="page" id="page-5">
+      <div class="page-inner">
+
+        <div class="future-hero">
+          <p class="p5-chosen-tag">You chose: <button class="p5-scenario-chip" id="p5-chosen-name">a scenario</button></p>
+          <h2 class="future-title">Here's what San Diego could look like in 2100</h2>
+        </div>
+
         <section class="chart-card">
-          <h2>Monthly Activities — <span id="future-scenario-label">2091–2100</span></h2>
-          <p class="subtitle">Your preferences applied to end-of-century climate — compared to today (2005–2014).</p>
+          <h2>Monthly Activities</h2>
           <div id="chart-future-rec" class="future-placeholder">
             <p class="placeholder-msg">⏳ Run <code>python scripts/extract_ssp.py</code> then refresh.</p>
           </div>
         </section>
 
-        <!-- Future seasonal chart — same toggle format as page 2 -->
         <section class="chart-card hero-card chart-toggled-card">
           <div class="chart-tab-bar">
             <button class="future-tab-btn active" data-var="temp_c">Temperature</button>
@@ -399,26 +431,105 @@
             <h2>Monthly Climate: Today vs. <span id="future-chart-heading">2091–2100</span></h2>
             <p class="subtitle">
               Lines: dashed=today (2005–2014), solid=projected 2091–2100 average<br>
-              Band: shaded area=year-to-year spread, wider means more volatile years, hover dots for details
+              Band: shaded area=year-to-year spread, wider means more volatile years
             </p>
             <div class="chart" id="chart-future-seasonal">
               <p class="placeholder-msg" style="padding:3rem 0;text-align:center">
                 ⏳ Run <code>python scripts/extract_ssp.py</code> then refresh.
               </p>
             </div>
-            <p id="future-chart-desc" class="future-chart-desc">Temperatures are projected to rise across all months, with summer peaks growing especially intense. Even modest warming accelerates heat stress and wildfire risk.</p>
+            <p id="future-chart-desc" class="future-chart-desc">Temperatures are projected to rise across all months, with summer peaks growing especially intense.</p>
           </div>
         </section>
 
+        <section class="chart-card consequence-section">
+          <h2>What this means for your great-grandchildren</h2>
+          <div id="consequence-grid"></div>
+        </section>
+
         <div class="page-nav-row">
-          <button class="page-back" id="btn-back-3">← Back to today's climate</button>
+          <button class="page-back" id="btn-back-5">← Back</button>
+          <button class="page-cta" id="btn-next-5">See the big picture →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ PAGE 6 — Big Picture / All Scenarios / Conclusion ════════════ -->
+    <div class="page" id="page-6">
+      <div class="page-inner">
+
+        <div class="conclusion-hero">
+          <h2 class="conclusion-title">Our Actions Have Consequences</h2>
+          <p class="conclusion-tagline">
+            Every degree of warming is a choice. Below are all four pathways side by side and what they mean for San Diego's coast, ecosystems, and stability.
+          </p>
+        </div>
+
+        <section class="chart-card hero-card">
+          <h2>All Scenarios: Monthly Temperature Compared</h2>
+          <p class="subtitle">
+            Dashed = today (2005–2014). Solid lines = 2091–2100 projections under each emissions path.
+          </p>
+          <div class="chart" id="chart-all-scenarios"></div>
+          <div class="scenario-legend">
+            <span class="legend-item"><span class="legend-swatch" style="background:#9bb3c9;border-style:dashed"></span>Today</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:#2a8c6e"></span>Clean Future (SSP 1-2.6)</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:#e8a030"></span>Middle Road (SSP 2-4.5)</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:#d9593a"></span>High Emissions (SSP 3-7.0)</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:#7a1020"></span>Fossil Future (SSP 5-8.5)</span>
+          </div>
+        </section>
+
+        <section class="chart-card hero-card">
+          <h2>Which Months Warm the Most?</h2>
+          <p class="subtitle">
+            Temperature change from today (2005–2014) to end-of-century (2091–2100) for every month and every scenario. Darker red means more warming. October and November lead — fall is disappearing fastest.
+          </p>
+          <div class="chart" id="chart-anomaly-heatmap"></div>
+        </section>
+
+        <div class="chart-card findings-card">
+          <h2>Key Takeaways</h2>
+          <div class="findings-grid">
+            <div class="finding-item">
+              <span class="finding-num">1</span>
+              <div>
+                <strong>Warming is already happening.</strong>
+                13 of the last 15 years on record came in warmer than the mid-century average. It's gradual, but the trend is pretty hard to argue with at this point.
+              </div>
+            </div>
+            <div class="finding-item">
+              <span class="finding-num">2</span>
+              <div>
+                <strong>Fall is changing the most.</strong>
+                October warms more than any other month across every single scenario, up to 4.5°C hotter than today under the worst path. The season we think of as "cooling down" is basically shrinking.
+              </div>
+            </div>
+            <div class="finding-item">
+              <span class="finding-num">3</span>
+              <div>
+                <strong>Storms get heavier and dry spells get longer.</strong>
+                It's not just less rain overall. The same annual rainfall gets packed into fewer, more intense events, which is a real problem for infrastructure that wasn't designed for that pattern.
+              </div>
+            </div>
+            <div class="finding-item">
+              <span class="finding-num">4</span>
+              <div>
+                <strong>The scenario chosen now is the city inherited later.</strong>
+                There's over 3°C of difference between the cleanest path and the worst. That might not sound like a lot, but it's basically the difference between San Diego still feeling like San Diego and something genuinely unrecognizable.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="page-nav-row">
+          <button class="page-back" id="btn-back-6">← Back</button>
         </div>
 
         <footer>
           <p id="meta-source"></p>
           <p>
-            Historical data:
-            <a href="https://console.cloud.google.com/marketplace/product/noaa-public/cmip6">NOAA Public CMIP6 on Google Cloud</a>
+            Historical data: <a href="https://console.cloud.google.com/marketplace/product/noaa-public/cmip6">NOAA Public CMIP6 on Google Cloud</a>
             (GFDL-ESM4 historical, r1i1p1f1). Future projections: GFDL-ESM4 ScenarioMIP (SSP 1-2.6 through 5-8.5).
             Course context: <a href="https://dsc106.com/projects/project3/">DSC 106 Project 3</a>.
             CMIP6 values are model simulations.
