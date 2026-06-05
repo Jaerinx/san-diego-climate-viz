@@ -1592,15 +1592,6 @@ function chartTempAnomalyHeatmap(sspData) {
     });
   });
 
-  // Color gradient legend
-  const legX = labelW, legW = 4 * cellW - 6, legY = H - 16;
-  const gradId = 'heatmap-grad';
-  const grad = svg.append('defs').append('linearGradient').attr('id', gradId).attr('x1', '0%').attr('x2', '100%');
-  grad.append('stop').attr('offset', '0%').attr('stop-color', '#fff4ee');
-  grad.append('stop').attr('offset', '100%').attr('stop-color', '#7a1020');
-  svg.append('rect').attr('x', legX).attr('y', legY - 6).attr('width', legW).attr('height', 5).attr('rx', 2).attr('fill', `url(#${gradId})`);
-  svg.append('text').attr('x', legX).attr('y', legY - 9).attr('font-size', 9).attr('fill', 'var(--muted)').text('Less warming →');
-  svg.append('text').attr('x', legX + legW).attr('y', legY - 9).attr('text-anchor', 'end').attr('font-size', 9).attr('fill', '#7a1020').attr('font-weight', '600').text('← More warming');
 }
 
 /* ── Page 6: Sea level rise chart ────────────────────────────────── */
