@@ -6,7 +6,7 @@ An interactive explorable explanation for [DSC 106 Final Project](https://dsc106
 
 **Live site:** https://jaerinx.github.io/san-diego-climate-viz/
 
-**Demo video:**  *(replace with your public YouTube link)*
+**Demo video:** https://youtu.be/twJMljjv67A
 
 **Repository:** https://github.com/Jaerinx/san-diego-climate-viz
 

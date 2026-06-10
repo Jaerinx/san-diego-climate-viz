@@ -1250,29 +1250,113 @@ ul.welcome-tagline li::before {
 }
 
 #page-1 .page-inner {
-  max-width: 820px;
+  max-width: 1100px;
   padding: 3.5rem 2rem;
+}
+
+.intro-layout {
+  display: grid;
+  grid-template-columns: 1fr minmax(280px, 400px);
+  gap: 2.5rem 3rem;
+  align-items: center;
+}
+
+.intro-main {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 2rem;
+  min-width: 0;
 }
 
 #page-1 .welcome-hero {
   padding: 0;
-  margin-bottom: 2rem;
+  margin-bottom: 0;
 }
 
 #page-1 .welcome-hero h1 {
   margin-bottom: 0.4rem;
+  font-size: clamp(2.6rem, 4.5vw, 4.2rem);
 }
 
 #page-1 .welcome-tagline {
   margin-top: 1.2rem;
 }
 
+#page-1 .intro-video {
+  margin-bottom: 0;
+  align-self: center;
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .intro-layout {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  #page-1 .intro-video {
+    max-width: 520px;
+  }
+}
+
+.intro-video-label {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.video-embed-wrap {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0e1520;
+  box-shadow: 0 4px 20px rgba(28, 43, 58, 0.1);
+  border: 1px solid var(--grid);
+}
+
+.video-embed-wrap iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.intro-video-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.video-link-btn {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  color: var(--accent);
+  border: 1.5px solid var(--grid);
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.video-link-btn:hover {
+  border-color: var(--accent);
+  background: var(--sky-tint);
+}
+
 #page-1 .page-cta-row {
   justify-content: flex-start;
-  margin-top: 2rem;
+  margin-top: 0;
 }
 
 /* ── Page 2 hero ──────────────────────────────────────────────────── */

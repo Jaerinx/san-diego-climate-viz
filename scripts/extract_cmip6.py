@@ -1,9 +1,3 @@
-"""Extract San Diego-area CMIP6 historical climate series for D3 visualizations.
-
-Follows the DSC106 lecture notebook workflow:
-https://github.com/dsc-courses/dsc106-2025-fa/blob/main/lectures/climate-lecture/CMIP%20basic_search_and_load-colab.ipynb
-"""
-
 from __future__ import annotations
 
 import calendar
